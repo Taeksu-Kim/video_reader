@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   status TEXT, stage TEXT, progress TEXT, error TEXT, error_kind TEXT,
   origin TEXT, caller TEXT, source TEXT, transcript TEXT, stt TEXT, overview TEXT, overview_backend TEXT,
   warnings TEXT, cost_usd REAL DEFAULT 0, purpose TEXT DEFAULT 'record', focus TEXT DEFAULT '', structure TEXT, article TEXT, polish TEXT,
-  transcribe TEXT DEFAULT 'auto', stt_fresh INTEGER DEFAULT 0
+  transcribe TEXT DEFAULT 'auto', stt_fresh INTEGER DEFAULT 0, concepts TEXT, concept_review TEXT, examples TEXT, story TEXT
 );
 CREATE TABLE IF NOT EXISTS sections (
   job_id TEXT, idx INTEGER, start REAL, end_ REAL, first INTEGER, last INTEGER,
@@ -27,9 +27,10 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 """
 JSON_COLS = {"progress", "source", "transcript", "stt", "overview", "warnings", "points", "cues", "frames", "observations",
-             "structure", "article", "mentions", "coverage", "polish"}
+             "structure", "article", "mentions", "coverage", "polish", "concepts", "concept_review", "examples", "story"}
 MIGRATE = {"jobs": [("purpose", "TEXT DEFAULT 'record'"), ("focus", "TEXT DEFAULT ''"), ("structure", "TEXT"), ("article", "TEXT"), ("polish", "TEXT"),
-                    ("transcribe", "TEXT DEFAULT 'auto'"), ("stt_fresh", "INTEGER DEFAULT 0")],
+                    ("transcribe", "TEXT DEFAULT 'auto'"), ("stt_fresh", "INTEGER DEFAULT 0"),
+                    ("concepts", "TEXT"), ("concept_review", "TEXT"), ("examples", "TEXT"), ("story", "TEXT")],
            "sections": [("label", "TEXT"), ("gist", "TEXT"), ("mentions", "TEXT"), ("coverage", "TEXT")]}   # 2026-11-25 구성·쓰임새 — 예전 DB 에 칸을 더한다
 
 

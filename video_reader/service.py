@@ -165,6 +165,7 @@ class Service:
                "mentions": (j["polish"] or {}).get("mentions") if j["polish"] else
                            E.merge_mentions([{"mentions": s["mentions"] or []} for s in secs if s["status"] == "done"]),
                "style": (j["polish"] or {}).get("style"),
+               "concepts": j["concepts"], "conceptReview": j["concept_review"], "examples": j["examples"], "story": j["story"],
                "coverage": {"checked": sum((s["coverage"] or {}).get("checked", 0) for s in secs),
                             "missing": [m for s in secs for m in (s["coverage"] or {}).get("missing", [])]},
                "transcript": {"source": tr.get("source"), "lang": tr.get("lang"), "lines": len(tr.get("segments") or []),
@@ -199,7 +200,8 @@ class Service:
         tr = j["transcript"] or {}
         return E.to_markdown(Source.from_dict(j["source"]), j["overview"], secs, transcript_source=tr.get("source") or "",
                              lang=tr.get("lang") or "", structure=j["structure"], art=j["article"],
-                             mentions=(j["polish"] or {}).get("mentions") if j["polish"] else None)
+                             mentions=(j["polish"] or {}).get("mentions") if j["polish"] else None,
+                             terms=j["concepts"], exs=j["examples"], story=j["story"])
 
     @staticmethod
     def _sec_view(s: dict) -> dict:
@@ -292,7 +294,7 @@ class Service:
         if backend and backend not in BACKENDS:
             raise ServiceError("bad_request", f"backend 는 {', '.join(BACKENDS)}")
         self.store.update_section(jid, idx, status="pending", backend=backend or j["backend"], error=None, edited=0)
-        self.store.update_job(jid, polish=None)
+        self.store.update_job(jid, polish=None, concepts=None, concept_review=None, examples=None, story=None)
         self.store.update_job(jid, status="queued", stage=f"구간 {idx + 1} 다시 만들기 기다리는 중", error=None, error_kind=None)
         self._kick()
         return self.job_detail(jid)
@@ -318,7 +320,8 @@ class Service:
             raise ServiceError("busy", "작업이 진행 중입니다 — 끝난 뒤에", 409)
         if backend and backend not in BACKENDS:
             raise ServiceError("bad_request", f"backend 는 {', '.join(BACKENDS)}")
-        self.store.update_job(jid, overview=None, article=None, overview_backend=backend or j["backend"], status="queued",
+        self.store.update_job(jid, overview=None, article=None, concepts=None, concept_review=None, examples=None, story=None,
+                              overview_backend=backend or j["backend"], status="queued",
                               stage="개요 다시 만들기 기다리는 중", error=None, error_kind=None)
         self._kick()
         return self.job_detail(jid)
@@ -491,18 +494,52 @@ class Service:
             ms = E.polish_mentions(llm, src, E.merge_mentions(fixed), out_lang=j["out_lang"] or "ko", asr=asr, seen_on_screen=screen)
             self._charge(jid, llm)
             self.store.update_job(jid, polish={"mentions": ms, "style": style})
-        # 6. 개요
+        # 6. 정리 층 재료: 용어·기준 → 원문에 대 보고 검토 → 구간마다 예시 (영상 밖 정의·만든 예시는 표시를 붙인다)
+        j = self.store.job(jid)
+        rows = self.store.sections(jid)
+        done = [{**self._sec_view(s), "first": s["first"], "last": s["last"]} for s in rows]
+        if j["concepts"] is None:
+            self._check(ev)
+            llm = self.engine.llm(j["overview_backend"] or j["backend"])
+            self._stage(jid, "용어·기준 정리 중")
+            terms = E.concepts(llm, src, done, out_lang=j["out_lang"] or "ko")
+            self._check(ev)
+            self._stage(jid, "용어·기준을 원문에 대 보고 검토하는 중")
+            terms, rv = E.review_concepts(llm, src, terms, done, segs, out_lang=j["out_lang"] or "ko")
+            self._charge(jid, llm)
+            self.store.update_job(jid, concepts=terms, concept_review=rv)
+        if j["examples"] is None:
+            self._check(ev)
+            llm = self.engine.llm(j["overview_backend"] or j["backend"])
+            self._stage(jid, "구간마다 예시 고르는 중")
+            exs = E.examples(llm, src, done, out_lang=j["out_lang"] or "ko")
+            self._charge(jid, llm)
+            self.store.update_job(jid, examples=exs)
+        # 7. 다시 짜기 — 영상 순서가 아니라 읽는 사람의 질문 순서로 (정리 층의 본문)
+        j = self.store.job(jid)
+        if j["story"] is None:
+            self._check(ev)
+            name = j["overview_backend"] or j["backend"]
+            llm = self.engine.llm(name)
+            self._stage(jid, "읽는 순서로 다시 짜는 중")
+            # Claude 는 정보 층을 거의 통째로, 로컬(8,192)은 줄여서
+            story = E.restructure(llm, src, done, terms=j["concepts"], exs=j["examples"], out_lang=j["out_lang"] or "ko",
+                                  budget=12000 if name == "claude" else 4200)
+            self._charge(jid, llm)
+            self.store.update_job(jid, story=story)
+        # 8. 개요
         j = self.store.job(jid)
         if not j["overview"]:
             self._check(ev)
             self._stage(jid, "전체 개요 쓰는 중")
             llm = self.engine.llm(j["overview_backend"] or j["backend"])
             done = [{**self._sec_view(s), "observations": s["observations"] or []} for s in self.store.sections(jid)]
-            ov = E.overview(llm, src, done, out_lang=j["out_lang"] or "ko", purpose=j["purpose"] or "record", focus=j["focus"] or "")
+            ov = E.overview(llm, src, done, out_lang=j["out_lang"] or "ko", purpose=j["purpose"] or "record", focus=j["focus"] or "",
+                            terms=j["concepts"])
             self._charge(jid, llm)
             self.store.update_job(jid, overview=ov)
             j = self.store.job(jid)
-        # 7. 공유 글 (쓰임새가 공유일 때만)
+        # 9. 공유 글 (쓰임새가 공유일 때만)
         if (j["purpose"] or "record") == "share" and not j["article"]:
             self._check(ev)
             self._stage(jid, "공유 글 쓰는 중")

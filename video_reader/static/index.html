@@ -168,6 +168,41 @@ h1{grid-column:1;grid-row:1;margin:0;font-size:22px;line-height:1.35;font-weight
 .mn{display:inline-flex;align-items:baseline;gap:6px}
 .mini-tc{font-size:12px}
 .mn small{display:block;font-size:12px;color:var(--ink-3);line-height:1.4}
+.story{padding:32px var(--pad-sheet) 36px;border-bottom:1px solid var(--line);display:grid;gap:28px}
+.story .at .tc{margin-left:6px}
+.st-lead{margin:0;font-size:17px;line-height:1.85;max-width:66ch;text-wrap:pretty;padding:20px 24px;background:var(--wash);border-radius:var(--r-ctl);border:1px solid var(--line)}
+.st-part{display:grid;gap:12px;max-width:72ch}
+.st-part h3{margin:0 0 4px;display:flex;gap:12px;align-items:baseline;font-size:19px;font-weight:650;letter-spacing:-.01em;line-height:1.45}
+.st-part h3 .no{flex:none;width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--accent);transform:translateY(-2px)}
+.st-pt p,.st-int p,.st-ex p{margin:0;font-size:15.5px;line-height:1.8;text-wrap:pretty}
+.st-pt{padding-left:36px}
+.st-pt ul{margin:6px 0 0;padding-left:18px;font-size:15px;line-height:1.7;color:var(--ink-2)} .st-pt li{margin-bottom:4px} .st-pt li::marker{color:var(--ink-3)}
+.st-int{margin-left:36px;padding:12px 16px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+.st-int b{display:block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:2px}
+.st-ex{margin-left:36px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:12px 16px;border:1px dashed var(--ctl-strong);border-radius:var(--r-ctl);color:var(--ink-2)}
+.st-ex .ex-tag{padding-top:4px}
+.roles{margin:0;display:grid;gap:0}
+.roles>div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding:10px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.65}
+.roles>div:first-child{border-top:0;padding-top:0}
+.roles dt{font-weight:600} .roles dd{margin:0;color:var(--ink-2)}
+.terms{padding:28px var(--pad-sheet) 32px;border-bottom:1px solid var(--line)}
+.see{font:inherit;font-size:13px;color:var(--accent);background:none;border:0;padding:0 0 0 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.see:hover{color:var(--ink)}
+.terms header{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;margin-bottom:12px}
+.terms h2{margin:0;font-size:13px;font-weight:600;color:var(--ink-3)}
+.terms dl{margin:0;display:grid;gap:0}
+.terms dl>div{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:12px 0;border-top:1px solid var(--line)}
+.terms dl>div:first-child{border-top:0}
+.terms dt{font-size:15px;font-weight:600;line-height:1.6}
+.terms dd{margin:0;font-size:15px;line-height:1.7;color:var(--ink-2)}
+.terms dd p{margin:0} .terms dd p .tc{margin-left:8px}
+.terms ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.terms li{display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr);gap:12px;padding:8px 12px;background:var(--wash);border-radius:var(--r-ctl)}
+.terms li b{font-weight:600;color:var(--ink)}
+.made{font-style:normal;font-size:12px;font-weight:500;color:var(--ink-3);margin-left:8px;padding:0 6px;border:1px dashed var(--ctl-strong);border-radius:4px;white-space:nowrap}
+.ex{margin:8px 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:15px;line-height:1.7;color:var(--ink-2)}
+.ex-tag{font-size:12px;font-weight:600;color:var(--accent);padding-top:3px}
+.ex .tc{margin-left:8px}
 .mn em{font-style:normal;font-size:12px;font-weight:500;color:var(--ink-2);margin-left:6px;padding:0 6px;border:1px dashed var(--ctl-strong);border-radius:4px}
 .cite{display:inline-flex;gap:4px;margin-left:8px;vertical-align:1px}
 .cite button{border:1px solid var(--line-2);background:var(--sheet);border-radius:4px;padding:0 6px;font:500 12px/20px Pretendard,sans-serif;color:var(--ink-3);cursor:pointer;font-variant-numeric:tabular-nums}
@@ -287,7 +322,8 @@ dialog.pic p b{color:var(--edge);font-weight:500}
   .app{grid-template-columns:1fr;padding:12px;gap:12px} aside{position:static;height:auto}
   body.has-job main{order:-1}
   :root{--pad-sheet:24px}
-  .over{grid-template-columns:1fr;gap:24px} .over>div+div{border-left:0;padding-left:0;margin-left:0;border-top:1px solid var(--line);padding-top:20px}
+  .st-pt,.st-int,.st-ex{margin-left:0;padding-left:0} .st-int,.st-ex{padding-left:14px} .roles>div{grid-template-columns:1fr;gap:2px}
+  .over{grid-template-columns:1fr;gap:24px} .terms dl>div{grid-template-columns:1fr;gap:4px} .terms li{grid-template-columns:1fr;gap:2px} .over>div+div{border-left:0;padding-left:0;margin-left:0;border-top:1px solid var(--line);padding-top:20px}
   .cut{grid-template-columns:1fr;gap:16px} .strip{position:static} .film{position:static;display:flex;gap:12px;overflow:auto;padding:12px 24px 4px}
   .film .frame{flex:0 0 170px}
   .label{grid-template-columns:minmax(0,1fr)} .facts{width:auto} .tools{grid-column:1;grid-row:3;flex-wrap:wrap}
@@ -571,7 +607,31 @@ function tabsHTML(j) {
 function answersHTML(j) {
   const as = (j.overview || {}).answers || []; if (!as.length) return "";
   return `<section class="answers"><h2>구간별 한 줄</h2><ol>${as.map(a => { const s = j.sections[a.idx]; if (!s) return "";
-    return `<li>${timeBtn(s.start)}<div><button type="button" class="jump" data-jump="${a.idx}">${esc(s.title)}</button><p>${esc(a.line)}</p></div></li>`; }).join("")}</ol></section>`;
+    const shown = new Set((j.story || {}).ex_used || []);   // 본문에 놓은 예시는 다시 싣지 않는다
+    const ex = (j.examples || []).find((e, k) => e.idx === a.idx && !shown.has(k));
+    const exh = ex ? `<p class="ex"><span class="ex-tag">예</span><span>${esc(ex.text)}${ex.source === "made" ? `<em class="made">만든 예시</em>` : (ex.t != null ? timeBtn(ex.t, "tc mini-tc") : "")}</span></p>` : "";
+    return `<li>${timeBtn(s.start)}<div><button type="button" class="jump" data-jump="${a.idx}">${esc(s.title)}</button><p>${esc(a.line)}</p>${exh}</div></li>`; }).join("")}</ol></section>`;
+}
+function storyHTML(j) {   // 다시 짠 정리 — 영상 순서가 아니라 읽는 사람의 질문 순서. 해석·만든 예시는 표시
+  const st = j.story; if (!st || !(st.parts || []).length) return "";
+  const at = fs => (fs || []).filter(i => j.sections[i]).map(i => timeBtn(j.sections[i].start, "tc mini-tc")).join("");
+  const block = b => b.kind === "example"
+    ? `<div class="st-ex"><span class="ex-tag">예</span><p>${esc(b.text)}${b.source === "made" ? `<em class="made">만든 예시</em>` : (b.t != null ? timeBtn(b.t, "tc mini-tc") : "")}</p></div>`
+    : b.kind === "interpret"
+    ? `<div class="st-int" role="note"><b>정리자 해석</b><p>${esc(b.text)}<span class="at">${at(b.from)}</span></p></div>`
+    : `<div class="st-pt"><p>${esc(b.text)}<span class="at">${at(b.from)}</span></p>${b.sub.length ? `<ul>${b.sub.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>`;
+  return `<section class="story" aria-label="다시 짠 정리">
+    ${st.lead ? `<p class="st-lead">${esc(st.lead)}<span class="at">${at(st.lead_from)}</span></p>` : ""}
+    ${st.parts.map((p, k) => `<section class="st-part" id="part-${k + 1}"><h3><span class="no">${k + 1}</span>${esc(p.heading)}</h3>${p.blocks.map(block).join("")}</section>`).join("")}
+  </section>`;
+}
+function termsHTML(j) {   // 용어와 기준 — 원문에 대 보고 검토한 것. 영상 밖 일반 정의는 표시
+  const ts = j.concepts || []; if (!ts.length) return "";
+  const rv = j.conceptReview || {};
+  return `<section class="terms"><header><h2>용어와 기준</h2><span class="cov">${ts.length}개 — 원문에 대 보고 검토${rv.fixed ? `, ${rv.fixed}개 고침` : ""}</span></header><dl>${ts.map(t => {
+    const s = t.idx != null ? j.sections[t.idx] : null;
+    const k = ((j.story || {}).expanded || {})[t.term];   // 본문이 항목을 풀었으면 정의만 + 그 절로
+    return `<div><dt>${esc(t.term)}${t.source === "general" ? `<em class="made">영상 밖 일반 정의</em>` : ""}</dt><dd><p>${esc(t.definition)}${s ? timeBtn(s.start, "tc mini-tc") : ""}${k ? ` <button type="button" class="see" data-part="${k}">항목별 뜻은 ${k}절</button>` : ""}</p>${(t.items || []).length && !k ? `<ul>${t.items.map(i => `<li><b>${esc(i.name)}</b><span>${esc(i.meaning)}${i.from_video === false ? `<em class="made">일반 뜻</em>` : ""}</span></li>`).join("")}</ul>` : ""}</dd></div>`; }).join("")}</dl></section>`;
 }
 function mentionsHTML(j) {
   const ms = j.mentions || []; const cov = j.coverage || {checked: 0, missing: []};
@@ -605,7 +665,11 @@ function renderJobBody() {
       <button class="btn" data-act="copyart">${icon("text")}글 복사</button></header>
       <h3>${esc(j.article.title)}</h3><div class="art-body">${esc(j.article.body)}</div>
       <p class="art-src">출처: ${esc(j.title)} — ${esc((j.source || {}).webpage_url || j.ref)}</p></section>` : "";
-  const ov = j.overview ? `<div><h2>개요<button class="btn quiet" data-act="regenov" ${j.status === "running" || j.status === "queued" ? "disabled" : ""} aria-haspopup="menu">${icon("redo")}다시 만들기${icon("chev")}</button></h2><p>${esc(j.overview.summary)}</p></div>
+  const roles = j.story && (j.story.by_role || []).length;
+  const ov = j.overview && j.story ? `<div><h2>처지별로 해 볼 것<button class="btn quiet" data-act="regenov" ${j.status === "running" || j.status === "queued" ? "disabled" : ""} aria-haspopup="menu">${icon("redo")}다시 만들기${icon("chev")}</button></h2>
+        ${roles ? `<dl class="roles">${j.story.by_role.map(r => `<div><dt>${esc(r.who)}</dt><dd>${esc(r.todo)}</dd></div>`).join("")}</dl>` : `<p class="wait">처지별로 나눌 조언이 없는 영상입니다.</p>`}</div>
+      <div><h2>가져갈 것</h2><ul>${j.overview.takeaways.map(x => `<li>${esc(lineOf(x))}${citeOf(j, x)}</li>`).join("")}</ul></div>`
+    : j.overview ? `<div><h2>개요<button class="btn quiet" data-act="regenov" ${j.status === "running" || j.status === "queued" ? "disabled" : ""} aria-haspopup="menu">${icon("redo")}다시 만들기${icon("chev")}</button></h2><p>${esc(j.overview.summary)}</p></div>
       <div><h2>가져갈 것</h2><ul>${j.overview.takeaways.map(x => `<li>${esc(lineOf(x))}${citeOf(j, x)}</li>`).join("")}</ul></div>`
     : `<div><h2>개요</h2><p class="wait">${j.status === "done" ? "개요가 없습니다." : "모든 구간을 정리하면 영상 전체 개요를 씁니다."}</p></div><div></div>`;
   $("#main").innerHTML = `<article class="sheet" aria-labelledby="h1">
@@ -619,6 +683,8 @@ function renderJobBody() {
     ${tabsHTML(j)}
     <div class="panel" ${tabOf(j) === "summary" ? "" : "hidden"} role="tabpanel" aria-labelledby="tab-summary">
       ${tldr}
+      ${storyHTML(j)}
+      ${termsHTML(j)}
       ${j.sections.length || j.overview ? `<div class="over">${ov}</div>` : ""}
       ${answersHTML(j)}
       ${art}
@@ -671,6 +737,8 @@ async function act(fn, ok) { try { S.job = await fn(); S.jobKey = ""; renderJob(
 $("#main").addEventListener("click", async e => {
   const tb = e.target.closest("[data-tab]");
   if (tb) { S.tab[S.job.id] = tb.dataset.tab; S.jobKey = ""; renderJob(); $(`#tab-${tb.dataset.tab}`)?.focus(); return; }
+  const sp = e.target.closest("[data-part]");
+  if (sp) { const c = $(`#part-${sp.dataset.part}`); c?.scrollIntoView({block: "start", behavior: "smooth"}); return; }
   const jp = e.target.closest("[data-jump]");
   if (jp) { S.tab[S.job.id] = "info"; S.jobKey = ""; renderJob(); const c = $(`#cut-${jp.dataset.jump}`); c?.scrollIntoView({block: "start"}); c?.querySelector(".tc")?.focus({preventScroll: true}); return; }
   const t = e.target.closest("[data-t]");

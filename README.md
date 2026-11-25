@@ -5,7 +5,8 @@
 
 - **글은 사람이 만든 자막부터**: 업로더 자막 → 파일 안 자막 트랙 → 옆의 `.srt/.vtt`. 유튜브 **자동 자막은 쓰지 않는다**.
   자막이 없으면 [stt 에이전트](../stt)에 A2A 로 받아 적기를 맡긴다 (이 PC 모델, 화자·문장 시각 포함).
-- **정보와 정리를 따로 둔다**: "정보"는 빠짐없이(구간마다 결론 + 항목 아래 이유·사례·자료, 언급된 것, 원문 숫자·이름 누락 검사), "정리"는 읽히게(세 줄 결론·개요·구간별 한 줄·가져갈 것 — 줄마다 출처 구간). 정리는 정보에 없는 말을 쓰지 않는다.
+- **정보와 정리를 따로 둔다**: "정보"는 빠짐없이(구간마다 결론 + 항목 아래 이유·사례·자료, 언급된 것, 원문 숫자·이름 누락 검사), "정리"는 읽히게 — 영상 순서대로 줄이지 않고 **읽는 사람의 질문 순서로 다시 짠다**(이것은 무엇인가 → 무엇이 필요한가 → …, 흩어진 같은 이야기를 한 곳에). 줄마다 출처 구간.
+- **용어·기준은 풀고, 예시를 붙인다**: "세 가지 역량"처럼 이름만 나온 기준은 항목마다 뜻을 쓰고, 정의는 원문이 나온 모든 자리에 대 보고 검토한다. 원문 예시가 좋으면 그 시각과 함께, 없거나 약하면 만든 예시를 붙인다. 영상 밖 일반 정의·만든 예시·정리자 해석은 늘 표시한다.
 - **stt 로 받아 적은 글은 이름·숫자를 바로잡는다**: 영상 설명·제목의 표기를 근거로 같은 대상일 때만 바로잡고, 근거 없는 사람·회사·책·강의 이름은 "받아 적기 확인 필요"로 표시. 자막이 있어도 stt 로(`transcribe: stt`), stt 의 예전 결과 말고 새로(`sttFresh`)는 켤 때만.
 - **영상의 구성을 따른다**: 올린 사람의 챕터 → 없으면 말에서 질문·항목·단계의 경계를 찾고 → 못 찾으면 시간으로 자른다. 구간마다 결론 한두 줄과 주장/근거로 나뉜 요점, 맨 위에 세 줄 결론.
 - **묻지 않고 기본값으로, 원하면 쓰임새·중점**: 쓰임새(기록·판단 기본 / 빠른 판단 / 공유 글 / 에이전트 입력)와 중점 한 줄을 고를 수 있고, 끝난 뒤 "다른 쓰임새로 다시 쓰기"는 글 층만 다시 쓴다(받아 적기·구간 정리는 그대로).
@@ -24,8 +25,8 @@
 
 영상 한 편이 인화지 한 장이다. 결과는 **정리**(읽히게)와 **정보**(빠짐없이) 두 탭으로 나뉜다.
 
-![정리 탭 — 세 줄 결론과 출처 구간](docs/images/summary.png)
-**정리 탭**: 세 줄 결론 → 개요 → 구간별 한 줄 → 가져갈 것. 줄마다 붙은 시각 칸은 그 문장이 기대는 구간이고, 누르면 정보 탭의 그 구간으로 간다.
+![정리 탭 — 질문별로 다시 짠 정리와 출처 구간](docs/images/summary.png)
+**정리 탭**: 세 줄 결론 → 한 문단 → 질문별로 다시 짠 정리(정리자 해석 띠·예시 상자) → 용어와 기준 → 처지별로 해 볼 것·가져갈 것 → 구간별 한 줄. 줄마다 붙은 시각 칸은 그 문장이 기대는 구간이고, 누르면 정보 탭의 그 구간으로 간다.
 머리의 접수 라벨에 길이·글의 출처(업로더 자막 / stt)·구성(챕터·질문·단계)·쓰임새·정리한 쪽·비용.
 
 ![정보 탭 — 필름 조각과 항목](docs/images/info.png)
@@ -49,7 +50,7 @@ python -m video_reader read "https://www.youtube.com/watch?v=…" --backend clau
   `lang`, `outLang`(기본 ko), `purpose`(record|brief|share|agent), `focus`(중점 한 줄), `transcribe`(auto|stt), `sttFresh`. 처음엔 WORKING, `GetTask` 로 다시 물으면 COMPLETED + artifact(마크다운 text + 구조 data) + `metadata.reviewUrl`.
   같은 messageId 는 같은 작업, 같은 영상·같은 설정이 이미 있으면 그 작업에 붙는다.
 - **import**: `from video_reader.engine import default_engine` → `eng.read(주소, 폴더, backend="claude")` 또는 단계별
-  (`probe` · `captions` · `submit_stt` · `split_sections` · `summarize_section` · `frame_times` · `grab` · `read_frames` · `overview` · `to_markdown`).
+  (`probe` · `captions` · `submit_stt` · `split_sections` · `summarize_section` · `frame_times` · `grab` · `read_frames` · `concepts` · `review_concepts` · `examples` · `restructure` · `overview` · `to_markdown`).
 - 환경 변수: `VR_STT_URL`(기본 8773) · `VR_LOCAL_URL`(기본 http://127.0.0.1:8002/v1) · `VR_LOCAL_VISION=1`(그림 받는 vLLM 일 때) · `VR_CLAUDE_MODEL`.
 
 ## 설치

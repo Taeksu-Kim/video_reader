@@ -150,7 +150,7 @@ class VideoTasks:
         md = self.svc.markdown(j["id"])
         data = {"title": d["title"], "duration": d["duration"], "source": d["source"], "overview": d["overview"],
                 "purpose": d["purpose"], "focus": d["focus"], "structure": d["structure"], "article": d["article"],
-                "mentions": d["mentions"], "coverage": d["coverage"],
+                "mentions": d["mentions"], "coverage": d["coverage"], "concepts": d["concepts"], "examples": d["examples"], "story": d["story"],
                 "transcript": {k: d["transcript"][k] for k in ("source", "lang", "lines")},
                 "sttReviewUrl": (d["stt"] or {}).get("reviewUrl"), "warnings": d["warnings"],
                 "sections": [{k: s[k] for k in ("start", "end", "title", "label", "gist", "points", "mentions", "observations", "link", "edited")}

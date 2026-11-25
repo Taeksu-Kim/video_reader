@@ -49,7 +49,7 @@ def test_youtube_uploader_subs_no_stt(client, fakes):
     assert secs[0]["link"].startswith("https://www.youtube.com/watch?v=abc123XYZ00&t=")
     assert d["costUsd"] > 0
     md = client.get(f"/api/jobs/{d['id']}/summary.md").text
-    assert "## 개요" in md and "화면 " in md and "업로더 자막" in md
+    assert "## 한 문단으로" in md and "화면 " in md and "업로더 자막" in md
 
 
 def test_youtube_without_uploader_subs_uses_stt(tmp_path, fakes, media):
@@ -355,3 +355,49 @@ def test_asr_rule_only_for_stt_transcripts(tmp_path, fakes, media):
         wait_job(c, create(c, YT, backend="claude", transcribe="stt")["job"]["id"])     # stt
         st = fakes["llms"]["claude"].prompts[len(cap):]
     assert not any("소리 인식(stt)" in p for p in cap) and any("소리 인식(stt)" in p for p in st)
+
+
+def test_terms_reviewed_and_examples_labeled(client, fakes):
+    """용어·기준을 뽑고 → 원문에 대 보고 검토(빠진 항목 채움) → 구간마다 예시(만든 예시는 표시) → 그다음 정리."""
+    d = wait_job(client, create(client, YT, backend="claude")["job"]["id"])
+    calls = fakes["llms"]["claude"].calls
+    assert calls.index("concepts") < calls.index("review") < calls.index("examples") < calls.index("restructure") < calls.index("overview")
+    t = {x["term"]: x for x in d["concepts"]}
+    assert [i["name"] for i in t["역량 세 가지"]["items"]] == ["엔지니어링", "비즈니스", "스피릿"]      # 검토가 채움
+    assert t["SVPG"]["source"] == "general" and d["conceptReview"]["fixed"] == 1
+    assert d["examples"][0]["source"] == "made" and d["examples"][0]["t"] is None
+    md = client.get(f"/api/jobs/{d['id']}/summary.md").text
+    assert t["역량 세 가지"]["items"][2]["from_video"] is False
+    assert "## 용어와 기준" in md and "*(영상 밖 일반 정의)*" in md and "*(만든 예시)*" in md
+    # 개요를 다시 만들면 용어·예시부터 다시
+    before = len(calls)
+    client.post(f"/api/jobs/{d['id']}/overview/regenerate", json={})
+    wait_job(client, d["id"])
+    assert calls[before:] == ["concepts", "review", "examples", "restructure", "overview"]
+
+
+def test_story_reorders_and_labels(client, fakes):
+    """다시 짠 정리: 범위 밖 구간·예시 번호는 버리고, 만든 예시·해석 표시가 화면 데이터와 마크다운에 남는다."""
+    d = wait_job(client, create(client, YT, backend="claude")["job"]["id"])
+    st = d["story"]
+    assert [p["heading"] for p in st["parts"]] == ["필요한 것", "어렵게 만드는 것"]
+    pt, ex = st["parts"][0]["blocks"]                       # 예시 7번(없는 번호)과 같은 예시 두 번째는 버려짐
+    assert pt["from"] == [0] and ex["kind"] == "example" and ex["source"] == "made" and ex["text"].startswith("어느 고객사")
+    assert 0 not in st["unused"]
+    md = client.get(f"/api/jobs/{d['id']}/summary.md").text
+    assert "## 한 문단으로" in md and "## 1. 필요한 것" in md and "*(만든 예시)*" in md and "> *정리자 해석* — 끈기가 중심이다." in md
+    # 겹침 없애기: 본문이 푼 목록은 용어 칸에서 다시 나열하지 않고, 본문에 놓은 예시는 구간별 한 줄 아래 다시 싣지 않는다
+    assert st["expanded"] == {"역량 세 가지": 1} and st["ex_used"] == [0]
+    assert "항목별 뜻은 위 1절." in md and "  - 스피릿:" not in md
+    assert md.count("어느 고객사에 들어간 FDE가") == 1
+    assert md.index("## 1. 필요한 것") < md.index("## 용어와 기준") < md.index("## 처지별로 해 볼 것")
+    assert "| 개발자 | 안 써 본 스택을 써 본다. |" in md and "## 개요" not in md
+
+
+def test_engine_read_has_same_layers(fakes, tmp_path):
+    """서버 없이 엔진만(CLI·import)으로 읽어도 용어·검토·예시·다시 짠 정리가 같은 단계로 나온다."""
+    from video_reader.engine import Engine
+    eng = Engine(remote=fakes["remote"], stt=fakes["stt"], llms=fakes["llms"])
+    r = eng.read(YT, tmp_path, backend="claude", log=lambda *_: None)
+    assert r["story"]["parts"] and r["concepts"] and r["conceptReview"]["fixed"] == 1 and r["examples"]
+    assert "## 한 문단으로" in r["markdown"] and "## 용어와 기준" in r["markdown"]

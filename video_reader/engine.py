@@ -194,7 +194,9 @@ OVERVIEW_SYSTEM = """너는 영상의 정보 기록(구간마다 결론과 항�
 - summary: {summary_len}. 결론과 그 근거가 이어지게 — tldr 를 되풀이하지 말고 이어서 설명한다.
 - answers: 구간 번호(n, 기록의 ## 번호)마다 한 줄 — 질문이면 그 답, 아니면 그 구간의 핵심. {answers_len}
 - takeaways: {takeaways_len}. tldr·summary·answers 에 쓴 문장을 되풀이하지 않는다 — 실제로 써먹을 것(방법·자료·판단 기준·주의할 점)으로.
-말한 사람의 의견은 의견으로 쓰되 이름은 처음 한 번만 ("말한 사람·화자" 같은 호칭은 쓰지 않는다). 글은 {lang}로, 문장은 "~다"로 끝낸다."""
+말한 사람의 의견은 의견으로 쓰되 이름은 처음 한 번만 ("말한 사람·화자" 같은 호칭은 쓰지 않는다). 글은 {lang}로, 문장은 "~다"로 끝낸다.
+'용어·기준' 이 주어지면: summary 에서 그 용어를 처음 쓸 때 짧게 풀어 쓰고, "세 가지"처럼 목록으로 말한 기준은 이름만 나열하지 말고 각각이 무엇인지 드러나게 쓴다.
+영상 밖 일반 정의는 영상의 주장처럼 쓰지 않는다."""
 
 OVERVIEW_SHAPE = {"record": ("3~6문장", "진행용 구간(인사·목차)은 건너뛴다.", "가져갈 것 3~7개 (한 줄씩)"),
                   "brief": ("2~3문장", "핵심 구간만, 최대 6줄.", "가져갈 것 1~3개 (한 줄씩)"),
@@ -506,6 +508,286 @@ def read_frames(llm: LLM, src: Source, section: dict, frames: Sequence[tuple[flo
 
 # ---------- 단계: 글 층 (쓰임새마다 다르다 — 다시 쓰기는 여기만) ----------
 
+# ---------- 단계: 용어·기준 → 검토 → 예시 (정리 층을 쓰기 전에) ----------
+# 정리 층에 영상 밖 내용(일반 정의·만든 예시)이 들어갈 수 있다 — 늘 표시를 붙인다 (source=general / made).
+
+CONCEPTS_SCHEMA = {"type": "object", "properties": {"terms": {"type": "array", "maxItems": 8, "items": {"type": "object", "properties": {
+    "term": {"type": "string"},
+    "kind": {"type": "string", "enum": ["용어", "약어", "기준·목록"]},
+    "definition": {"type": "string"},
+    "items": {"type": "array", "maxItems": 8, "items": {"type": "object", "properties": {
+        "name": {"type": "string"}, "meaning": {"type": "string"}, "from_video": {"type": "boolean"}},
+                                                                    "required": ["name", "meaning", "from_video"]}},
+    "source": {"type": "string", "enum": ["video", "general"]},
+    "n": {"type": "integer"}},
+    "required": ["term", "kind", "definition", "items", "source", "n"]}}}, "required": ["terms"]}
+
+CONCEPTS_SYSTEM = """너는 영상의 정보 기록을 읽고, 영상을 보지 않은 사람이 정리를 읽다가 막힐 것을 미리 풀어 둔다.
+- terms: 이 영상의 핵심 용어·약어(예: 직무 이름, 업계 약어, 말한 사람이 만든 말)와, "세 가지 역량"·"두 가지 조건"처럼 **목록으로 말한 기준**을 모두.
+  누구나 아는 말(AI·개발자·교훈 같은)은 넣지 않는다. 결론을 이해하는 데 꼭 필요한 것만 최대 8개, 중요한 순서로.
+  이름만 나열돼 뜻을 알 수 없는 목록(예: "역량 세 가지")은 꼭 넣고, 항목 이름만으로 뜻이 분명한 목록은 넣지 않는다.
+- definition: 한두 문장. 영상에서 말한 사람이 설명했으면 그 내용으로(source=video, n=그 구간 번호), 영상에 설명이 없으면 일반적으로 쓰는 뜻으로(source=general, n=처음 나온 구간 번호).
+  약어를 풀어 쓴 것만 일반 지식이고 뜻의 중심이 영상의 설명이면 video 다. general 은 정의 전체가 영상 밖에서 왔을 때만.
+  일반 정의는 확실한 것만 — 모르면 "영상에서 정의하지 않음"이라고 쓴다. 지어내지 않는다.
+- kind 가 기준·목록이면 items 에 항목마다 name, meaning(그 항목이 구체적으로 무엇인지), from_video(그 뜻을 영상에서 말했으면 true, 네가 일반 뜻으로 채웠으면 false). 아니면 items 는 빈 목록.
+글은 {lang}로, 문장은 "~다"로 끝낸다."""
+
+REVIEW_SCHEMA = {"type": "object", "properties": {"reviews": {"type": "array", "items": {"type": "object", "properties": {
+    "n": {"type": "integer"}, "ok": {"type": "boolean"}, "problem": {"type": "string"},
+    "definition": {"type": "string"},
+    "items": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "meaning": {"type": "string"},
+                                                                         "from_video": {"type": "boolean"}},
+                                         "required": ["name", "meaning", "from_video"]}},
+    "source": {"type": "string", "enum": ["video", "general"]}},
+    "required": ["n", "ok", "problem", "definition", "items", "source"]}}}, "required": ["reviews"]}
+
+REVIEW_SYSTEM = """너는 용어·기준 정리를 검토한다. 각 줄(번호)에 대해 원문 근거(받아 적은 말)를 보고 판단한다:
+- 원문 근거는 그 말이 나온 자리들을 발췌한 것이다 — 발췌에 없다는 이유만으로 틀렸다고 단정하지 않는다.
+  발췌에 정의와 **반대되는** 내용이 있거나, 정의가 원문 어디에도 기대지 않은 지어낸 말일 때만 고친다.
+- 말한 사람이 그 말을 쓴 뜻과 정의가 맞나 (영상에서 다르게 썼으면 영상의 뜻으로)
+- source=general 인 일반 정의가 틀리거나 과장됐나. 항목의 from_video 가 맞나 (영상에서 말하지 않은 뜻을 true 로 두지 않는다)
+- 기준·목록이면 항목 수가 말한 수("세 가지")와 맞고 항목마다 뜻이 원문과 맞나 — 빠진 항목은 채운다
+- 영상을 안 본 사람이 이 정의만 읽고 이해할 수 있나 (너무 추상적이면 구체적으로)
+고칠 것이 없으면 ok=true 에 정의·항목을 그대로, 있으면 ok=false, problem 에 무엇이 문제였는지 한 줄, 고친 definition·items·source. 글은 {lang}로."""
+
+EXAMPLES_SCHEMA = {"type": "object", "properties": {"examples": {"type": "array", "maxItems": 40, "items": {"type": "object", "properties": {
+    "n": {"type": "integer"}, "source": {"type": "string", "enum": ["video", "made"]},
+    "text": {"type": "string"}, "at": {"type": "string"}},
+    "required": ["n", "source", "text", "at"]}}}, "required": ["examples"]}
+
+EXAMPLES_SYSTEM = """너는 영상 정리의 구간마다, 영상을 보지 않은 사람이 그 구간의 결론을 바로 이해할 수 있게 구체적인 예시를 하나씩 붙인다.
+- 기록에 말한 사람이 든 예시·사례·숫자가 있고 그것만으로 이해가 되면 그 예시를 쓴다 (source=video, at=그 항목의 시각 mm:ss).
+- 예시가 없거나, 있어도 너무 짧거나 맥락 없이는 이해가 안 되면 네가 만든다 (source=made, at=빈 글자):
+  그 구간의 결론을 그대로 보여 주는 현실적인 장면 하나 — 누가·어떤 상황에서·무엇을 하는지가 보이게, 두세 문장.
+  만든 예시에는 영상에 없는 숫자·회사·사람 이름을 사실처럼 쓰지 않는다 (예: "어느 제조사 고객사에 들어간 FDE가 …").
+  말한 사람 본인이나 그 사람의 조직·강의·회사가 한 일처럼 쓰지 않는다 — 실제 일로 읽힌다. 일반적인 제3자 장면으로, 두세 문장.
+- 진행용 구간(인사·목차 예고)은 건너뛴다. n 은 기록의 ## 번호. 말한 사람은 이름으로 쓰고 "말한 사람·화자"라고 부르지 않는다.
+글은 {lang}로, 문장은 "~다"로 끝낸다."""
+
+
+def concepts(llm: LLM, src: Source, sections: list[dict], *, out_lang: str = "ko", budget: int = 4200) -> list[dict]:
+    """정보 층 → 용어·기준 [{term, kind, definition, items[{name, meaning}], source(video|general), idx}]."""
+    body = _sections_digest(src, sections, budget)
+    raw = _json_retry(llm, CONCEPTS_SYSTEM.replace("{lang}", _lang(out_lang)), f"{_head(src)}\n\n정보 기록:\n{body}", CONCEPTS_SCHEMA)
+    out = []
+    for t in raw.get("terms") or []:
+        if not isinstance(t, dict) or not str(t.get("term") or "").strip() or not str(t.get("definition") or "").strip():
+            continue
+        n = t.get("n") if isinstance(t.get("n"), int) else 0
+        out.append({"term": str(t["term"]).strip(), "kind": t.get("kind") if t.get("kind") in ("용어", "약어", "기준·목록") else "용어",
+                    "definition": str(t["definition"]).strip(),
+                    "items": [{"name": str(i.get("name", "")).strip(), "meaning": str(i.get("meaning", "")).strip(),
+                               "from_video": i.get("from_video") is not False}
+                              for i in t.get("items") or [] if isinstance(i, dict) and str(i.get("name", "")).strip()],
+                    "source": "video" if t.get("source") == "video" else "general",
+                    "idx": n - 1 if 1 <= n <= len(sections) else None})
+    return out
+
+
+def _evidence(term: dict, sections: list[dict], segments: list[dict], width: int = 2600) -> str:
+    """검토 근거: 그 용어(와 항목 이름)가 나온 모든 자리의 앞뒤 줄, 없으면 처음 나온 구간 앞부분.
+    (처음 나온 구간 근처만 주자 다른 자리에 있던 원문을 "근거 없음"으로 잘못 고쳤다 — 2026-11-26 FDE 스피릿·PO/PM)"""
+    names = [term["term"]] + [i["name"] for i in term.get("items") or []]
+    keys = sorted({part.strip()[:6] for n in names for part in re.split(r"[/·,()]", n) if len(part.strip()) >= 2})   # "PO / PM" → PO, PM
+    hits = sorted({j for j, s in enumerate(segments) if any(k in s["text"] for k in keys)})
+    picked: list[int] = []
+    for sec in sections:                                  # 제목에 그 용어가 든 구간은 통째로 (그 구간이 그 용어를 설명한다)
+        if "first" in sec and any(k in (sec.get("title") or "") for k in keys):
+            picked += [k for k in range(sec["first"], sec["last"] + 1) if k not in picked]
+    for j in hits:
+        for k in range(max(0, j - 2), min(len(segments), j + 4)):
+            if k not in picked:
+                picked.append(k)
+    if not picked and term.get("idx") is not None and term["idx"] < len(sections) and "first" in sections[term["idx"]]:
+        sec = sections[term["idx"]]
+        picked = list(range(sec["first"], min(sec["last"] + 1, sec["first"] + 14)))
+    out, last = [], None
+    for k in sorted(picked):
+        if last is not None and k != last + 1:
+            out.append("…")
+        out.append(line(segments[k]))
+        last = k
+    return "\n".join(out)[:width]
+
+
+def review_concepts(llm: LLM, src: Source, terms: list[dict], sections: list[dict], segments: list[dict], *,
+                    out_lang: str = "ko") -> tuple[list[dict], dict]:
+    """용어·기준을 원문 근거에 대 보고 고친다 → (고친 목록, {checked, fixed, problems[]})."""
+    if not terms:
+        return terms, {"checked": 0, "fixed": 0, "problems": []}
+    blocks = []
+    for n, t in enumerate(terms, 1):
+        items = "".join(f"\n   - {i['name']}: {i['meaning']}" for i in t["items"])
+        blocks.append(f"{n}. {t['term']} ({t['kind']}, source={t['source']})\n   정의: {t['definition']}{items}\n   원문 근거:\n"
+                      + "\n".join("     " + ln for ln in _evidence(t, sections, segments).splitlines()))
+    raw = _json_retry(llm, REVIEW_SYSTEM.replace("{lang}", _lang(out_lang)), f"{_head(src)}\n\n" + "\n\n".join(blocks), REVIEW_SCHEMA)
+    out = [dict(t) for t in terms]
+    problems, fixed = [], 0
+    for r in raw.get("reviews") or []:
+        try:
+            k = int(r.get("n")) - 1
+        except (TypeError, ValueError):
+            continue
+        if not (0 <= k < len(out)) or r.get("ok") is True:
+            continue
+        if str(r.get("definition") or "").strip():
+            out[k]["definition"] = str(r["definition"]).strip()
+        its = [{"name": str(i.get("name", "")).strip(), "meaning": str(i.get("meaning", "")).strip(), "from_video": i.get("from_video") is not False}
+               for i in r.get("items") or [] if isinstance(i, dict) and str(i.get("name", "")).strip()]
+        if its or out[k]["kind"] != "기준·목록":
+            out[k]["items"] = its
+        if r.get("source") in ("video", "general"):
+            out[k]["source"] = r["source"]
+        out[k]["reviewed"] = str(r.get("problem") or "").strip()
+        problems.append(f"{out[k]['term']}: {out[k]['reviewed']}")
+        fixed += 1
+    return out, {"checked": len(terms), "fixed": fixed, "problems": problems}
+
+
+def examples(llm: LLM, src: Source, sections: list[dict], *, out_lang: str = "ko", budget: int = 4200) -> list[dict]:
+    """구간마다 예시 하나 [{idx, source(video|made), text, t}]."""
+    body = _sections_digest(src, sections, budget)
+    raw = _json_retry(llm, EXAMPLES_SYSTEM.replace("{lang}", _lang(out_lang)), f"{_head(src)}\n\n정보 기록:\n{body}", EXAMPLES_SCHEMA)
+    out, seen = [], set()
+    for x in raw.get("examples") or []:
+        try:
+            k = int(x.get("n")) - 1
+        except (TypeError, ValueError):
+            continue
+        if not (0 <= k < len(sections)) or k in seen or not str(x.get("text") or "").strip():
+            continue
+        seen.add(k)
+        src_kind = "video" if x.get("source") == "video" else "made"
+        t = parse_at(x.get("at")) if src_kind == "video" else None
+        out.append({"idx": k, "source": src_kind, "text": str(x["text"]).strip(), "t": t})
+    return out
+
+
+def _concepts_brief(terms: list[dict]) -> str:
+    rows = []
+    for t in terms or []:
+        items = "; ".join(f"{i['name']} = {i['meaning']}" for i in t.get("items") or [])
+        rows.append(f"- {t['term']}: {t['definition']}" + (f" ({items})" if items else "") + (" [영상 밖 일반 정의]" if t["source"] == "general" else ""))
+    return "\n".join(rows)
+
+
+# ---------- 단계: 다시 짜기 (정리 층의 본문) ----------
+# 영상 순서대로 줄이지 않는다 — 읽는 사람이 궁금해할 질문을 먼저 세우고, 영상 전체에서 답을 모아 엮는다.
+# 흩어진 내용을 잇는 해석은 kind=interpret 로 따로 (영상의 주장처럼 쓰지 않는다). 예시는 앞 단계에서 고른 것을 번호로만 가져온다
+# (만든 예시 표시가 글에서 떨어지지 않게).
+
+_BLOCK = {"type": "object", "properties": {
+    "kind": {"type": "string", "enum": ["point", "interpret", "example"]},
+    "text": {"type": "string"}, "sub": {"type": "array", "items": {"type": "string"}},
+    "from": {"type": "array", "items": {"type": "integer"}}, "ex": {"type": "integer"}},
+    "required": ["kind", "text", "sub", "from", "ex"]}
+RESTRUCTURE_SCHEMA = {"type": "object", "properties": {
+    "lead": {"type": "string"}, "lead_from": {"type": "array", "items": {"type": "integer"}},
+    "parts": {"type": "array", "minItems": 2, "maxItems": 7, "items": {"type": "object", "properties": {
+        "question": {"type": "string"}, "heading": {"type": "string"}, "blocks": {"type": "array", "items": _BLOCK}},
+        "required": ["question", "heading", "blocks"]}},
+    "by_role": {"type": "array", "maxItems": 6, "items": {"type": "object", "properties": {
+        "who": {"type": "string"}, "todo": {"type": "string"}, "from": {"type": "array", "items": {"type": "integer"}}},
+        "required": ["who", "todo", "from"]}}},
+    "required": ["lead", "lead_from", "parts", "by_role"]}
+
+RESTRUCTURE_SYSTEM = """너는 영상 하나의 정보 기록 전체를 받아, 영상을 보지 않은 사람이 이 글만 읽고 내용을 이해하고 쓸 수 있도록 **다시 짠 정리**를 쓴다.
+영상 순서대로 줄이는 것이 아니다. 기록을 발췌해 이어 붙이지 말고, 네가 내용을 이해한 뒤 설명하는 순서로 다시 세운다.
+
+순서:
+1. 먼저 이 영상을 읽을 사람이 궁금해할 질문을 3~6개 세운다 (예: 이것은 무엇인가 / 왜 중요한가 / 무엇이 필요한가 / 어떻게 하나 / 앞으로는).
+   영상의 중심 대상(직무·기술·제품 등)이 낯선 사람에게는 "그것이 무엇이고 무슨 일을 하나"가 첫 질문이다 — 영상 여기저기서 설명한 것을 모아 먼저 세운다.
+   질문의 순서는 영상 순서가 아니라 이해가 쌓이는 순서다. 각 질문이 parts 하나 — question 에 그 질문, heading 은 질문이 아니라 답이 드러나는 제목.
+   절의 blocks 는 그 question 에 답하는 것만 넣는다. 다른 질문에 더 맞는 내용은 그 절로 옮긴다 (예: "무엇을 쌓을까" 절에 "신입도 설계에 참여하나"를 끼우지 않는다).
+2. 질문마다 영상 전체에서 답이 되는 내용을 모은다. 여러 구간에 흩어진 같은 이야기는 한 곳에 합친다.
+3. 주장마다 말한 사람이 든 이유·근거·사례·숫자·비유를 붙인다. "빠르게 해야 한다"가 아니라 그가 든 장면을 쓴다.
+4. 용어는 처음 나올 때 뜻을 풀고(주어진 '용어·기준'을 쓴다), "세 가지"처럼 목록으로 말한 기준은 항목마다 무엇인지 sub 에 쓴다.
+   같은 목록을 항목별로 푸는 것은 글 전체에서 한 번만 — 다른 절에서는 이름만 부르고 다시 나열하지 않는다.
+5. 흩어진 내용을 잇는 네 해석 — 두 주장이 같은 것을 다른 쪽에서 본 것이다, 이 둘이 함께 있어서 어렵다 같은 — 은 kind=interpret 로 따로 쓴다.
+   해석은 기록에 기대야 하고(from), 영상 전체를 꿰는 데 도움이 될 때만, 글 전체에 두세 개까지.
+6. 주어진 '예시' 가운데 이해를 크게 돕는 것은 kind=example, ex=예시 번호로 그 자리에 놓는다 (text 는 빈 글자 — 코드가 채운다). 글 전체에 서너 개까지.
+   바로 앞 point 가 이미 그 예시 내용을 다 말했으면 놓지 않는다 (같은 말 되풀이). 원문 사례를 point 에 녹였으면 예시는 다른 것을 고른다.
+
+- blocks 의 kind=point 는 영상 내용. text 는 한두 문장, 필요하면 sub 에 항목 — sub 는 text 가 가리키는 목록일 때만(text 만 읽고 그 목록이 무엇인지 알 수 있게).
+  from 에 근거 구간 번호(기록의 ## 번호)를 모두.
+- 진행용 말(인사·목차 예고·질문 출처 소개·채널 홍보)은 쓰지 않는다. 기록에 없는 사실은 쓰지 않는다.
+- lead: 한 문단(3~5문장). 이 영상이 답하는 물음, 말한 사람의 답, 그 핵심 이유. lead_from 에 근거 구간.
+- by_role: 읽는 사람의 처지별(예: 개발자 / 기획자 / 교육을 만드는 쪽)로 영상에서 권한 일을 한 줄씩. 영상이 권하지 않은 일은 쓰지 않는다. 처지가 하나뿐이면 빈 목록.
+말한 사람의 이름은 처음 한 번만 ("말한 사람·화자" 같은 호칭은 쓰지 않는다). 글은 {lang}로, 문장은 "~다"로 끝낸다."""
+
+
+def _example_list(exs: list[dict], sections: list[dict]) -> str:
+    rows = []
+    for k, e in enumerate(exs or [], 1):
+        tag = "만든 예시" if e["source"] == "made" else f"영상 {fmt_t(e['t'])}" if e.get("t") is not None else "영상"
+        rows.append(f"{k}. (구간 {e['idx'] + 1}, {tag}) {e['text']}")
+    return "\n".join(rows)
+
+
+def restructure(llm: LLM, src: Source, sections: list[dict], *, terms: Optional[list] = None, exs: Optional[list] = None,
+                out_lang: str = "ko", budget: int = 4200) -> dict:
+    """정보 층 + 용어 + 예시 → {lead, lead_from, parts[{heading, blocks[{kind, text, sub, from, example?}]}], by_role, unused}.
+    unused = 근거로 한 번도 쓰이지 않은 구간 번호(0부터) — 빠뜨린 것인지 사람이 볼 수 있게."""
+    body = _sections_digest(src, sections, budget)
+    desc = (src.description or "")[:600]
+    user = (f"{_head(src)}" + (f"\n영상 설명: {desc}" if desc else "")
+            + (f"\n\n용어·기준 (검토함):\n{_concepts_brief(terms)}" if terms else "")
+            + (f"\n\n예시:\n{_example_list(exs, sections)}" if exs else "") + f"\n\n정보 기록:\n{body}")
+    raw = _json_retry(llm, RESTRUCTURE_SYSTEM.replace("{lang}", _lang(out_lang)), user, RESTRUCTURE_SCHEMA)
+    n = len(sections)
+    idx = lambda xs: sorted({int(x) - 1 for x in xs or [] if isinstance(x, int) and 1 <= x <= n})
+    used: set[int] = set()
+    parts, ex_used = [], []
+    for prt in raw.get("parts") or []:
+        blocks = []
+        for b in prt.get("blocks") or []:
+            kind = b.get("kind") if b.get("kind") in ("point", "interpret", "example") else "point"
+            if kind == "example":
+                k = b.get("ex")
+                if not isinstance(k, int) or not (1 <= k <= len(exs or [])):
+                    continue
+                e = exs[k - 1]
+                if k - 1 in ex_used:
+                    continue
+                ex_used.append(k - 1)
+                blocks.append({"kind": "example", "text": e["text"], "sub": [], "from": [e["idx"]], "source": e["source"], "t": e.get("t")})
+                continue
+            text = str(b.get("text") or "").strip()
+            if not text:
+                continue
+            f = idx(b.get("from"))
+            used.update(f)
+            blocks.append({"kind": kind, "text": text, "sub": [str(x).strip() for x in b.get("sub") or [] if str(x).strip()], "from": f})
+        if blocks and str(prt.get("heading") or "").strip():
+            parts.append({"question": str(prt.get("question") or "").strip(), "heading": str(prt["heading"]).strip(), "blocks": blocks})
+    roles = [{"who": str(r.get("who") or "").strip(), "todo": str(r.get("todo") or "").strip(), "from": idx(r.get("from"))}
+             for r in raw.get("by_role") or [] if str(r.get("todo") or "").strip()]
+    lead_from = idx(raw.get("lead_from"))
+    used.update(lead_from)
+    for r in roles:
+        used.update(r["from"])
+    return {"lead": str(raw.get("lead") or "").strip(), "lead_from": lead_from, "parts": parts, "by_role": roles,
+            "unused": [i for i in range(n) if i not in used], "ex_used": ex_used, "expanded": expanded_in_story(terms or [], parts)}
+
+
+def _key(name: str) -> str:
+    return re.sub(r"\s+|\(.*?\)", "", name)[:4]
+
+
+def expanded_in_story(terms: list[dict], parts: list[dict]) -> dict:
+    """목록형 용어 가운데 본문이 항목을 다 풀어 쓴 것 → {용어: 절 번호(1부터)}. 용어 칸은 정의만 두고 그 절을 가리킨다 (같은 목록 두 번 나열 방지)."""
+    out = {}
+    for t in terms:
+        keys = [_key(i["name"]) for i in t.get("items") or [] if _key(i["name"])]
+        if len(keys) < 2:
+            continue
+        for k, prt in enumerate(parts, 1):
+            if any(b["kind"] == "point" and all(any(key in re.sub(r"\s+", "", x) for x in b["sub"]) for key in keys) for b in prt["blocks"]):
+                out[t["term"]] = k
+                break
+    return out
+
+
 def _sections_digest(src: Source, sections: list[dict], budget: int) -> str:
     """정보 층을 정리 층의 재료로 — 구간 번호(##n)를 붙이고, 길면 구간마다 앞쪽 항목만."""
     for keep in (16, 8, 5, 3, 2, 1):
@@ -525,14 +807,15 @@ def _sections_digest(src: Source, sections: list[dict], budget: int) -> str:
 
 
 def overview(llm: LLM, src: Source, sections: list[dict], *, out_lang: str = "ko", budget: int = 4200,
-             purpose: Purpose = "record", focus: str = "") -> dict:
+             purpose: Purpose = "record", focus: str = "", terms: Optional[list] = None) -> dict:
     """정보 층 → 정리 층 {tldr[3], summary, answers[{n, line}], takeaways}."""
     desc = (src.description or "")[:600]
     body = _sections_digest(src, sections, budget)
     s_len, a_len, t_len = OVERVIEW_SHAPE.get(purpose, OVERVIEW_SHAPE["record"])
     system = (OVERVIEW_SYSTEM.replace("{lang}", _lang(out_lang)).replace("{summary_len}", s_len)
               .replace("{answers_len}", a_len).replace("{takeaways_len}", t_len) + _focus(focus))
-    user = f"{_head(src)}" + (f"\n영상 설명: {desc}" if desc else "") + f"\n\n정보 기록:\n{body}"
+    user = (f"{_head(src)}" + (f"\n영상 설명: {desc}" if desc else "")
+            + (f"\n\n용어·기준 (검토함):\n{_concepts_brief(terms)}" if terms else "") + f"\n\n정보 기록:\n{body}")
     raw = _json_retry(llm, system, user, OVERVIEW_SCHEMA)
     if not str(raw.get("summary") or "").strip():
         raise LLMError("bad_output", "개요가 비었습니다")
@@ -732,13 +1015,20 @@ def _line(x) -> str:
     return x["text"] if isinstance(x, dict) else str(x)
 
 
+def _at(frm: list[int], sections: list[dict]) -> str:
+    """근거 구간 시각을 짧게: " (01:15, 09:36)"."""
+    ts = [fmt_t(sections[i]["start"]) for i in frm or [] if i < len(sections)]
+    return f" ({', '.join(ts)})" if ts else ""
+
+
 def _cite(x, sections: list[dict]) -> str:
     frm = x.get("from") if isinstance(x, dict) else None
     return (" — 구간 " + ", ".join(fmt_t(sections[i]["start"]) for i in frm if i < len(sections))) if frm else ""
 
 
 def to_markdown(src: Source, ov: Optional[dict], sections: list[dict], *, transcript_source: str = "", lang: str = "",
-                structure: Optional[dict] = None, art: Optional[dict] = None, mentions: Optional[list] = None) -> str:
+                structure: Optional[dict] = None, art: Optional[dict] = None, mentions: Optional[list] = None,
+                terms: Optional[list] = None, exs: Optional[list] = None, story: Optional[dict] = None) -> str:
     link = lambda t: f"[{fmt_t(t)}]({src.link(t)})" if src.link(t) else f"[{fmt_t(t)}]"
     out = [f"# {src.title or src.ref}", "", f"- 출처: {src.webpage_url or src.ref}"]
     if src.duration:
@@ -750,13 +1040,52 @@ def to_markdown(src: Source, ov: Optional[dict], sections: list[dict], *, transc
     if ov:
         if ov.get("tldr"):
             out += ["## 세 줄 결론", ""] + [f"{i + 1}. {_line(x)}{_cite(x, sections)}" for i, x in enumerate(ov["tldr"])] + [""]
-        out += ["## 개요", "", ov["summary"], ""]
+        if story and story.get("lead"):
+            out += ["## 한 문단으로", "", story["lead"] + _at(story["lead_from"], sections), ""]
+        def terms_md():
+            if not terms:
+                return []
+            rows, exp = ["## 용어와 기준", ""], (story or {}).get("expanded") or {}
+            for t in terms:
+                k = exp.get(t["term"])
+                rows.append(f"- **{t['term']}** — {t['definition']}" + (" *(영상 밖 일반 정의)*" if t["source"] == "general" else "")
+                            + (f" 항목별 뜻은 위 {k}절." if k else ""))
+                if not k:
+                    rows += [f"  - {i['name']}: {i['meaning']}" + ("" if i.get("from_video", True) else " *(일반 뜻)*") for i in t.get("items") or []]
+            return rows + [""]
+        if not (story and story.get("parts")):
+            out += terms_md()
+        if story and story.get("parts"):
+            for no, prt in enumerate(story["parts"], 1):
+                out += [f"## {no}. {prt['heading']}", ""]
+                for b in prt["blocks"]:
+                    if b["kind"] == "example":
+                        tag = " *(만든 예시)*" if b["source"] == "made" else (f" (영상 {fmt_t(b['t'])})" if b.get("t") is not None else "")
+                        out += [f"> 예: {b['text']}{tag}", ""]
+                    elif b["kind"] == "interpret":
+                        out += [f"> *정리자 해석* — {b['text']}", ""]
+                    else:
+                        out.append(f"- {b['text']}{_at(b['from'], sections)}")
+                        out += [f"  - {x}" for x in b["sub"]]
+                if out[-1] != "":
+                    out.append("")
+            out += terms_md()
+            if story.get("by_role"):
+                out += ["## 처지별로 해 볼 것", "", "| 지금의 나 | 해 볼 것 |", "|---|---|"]
+                out += [f"| {r['who']} | {r['todo']} |" for r in story["by_role"]] + [""]
+        else:
+            out += ["## 개요", "", ov["summary"], ""]
         if ov.get("answers"):
             out += ["## 구간별 한 줄", ""]
             for a in ov["answers"]:
                 if a["idx"] < len(sections):
                     s = sections[a["idx"]]
                     out.append(f"- {link(s['start'])} **{s['title']}** — {a['line']}")
+                    shown = set((story or {}).get("ex_used") or [])          # 본문에 놓은 예시는 여기서 다시 싣지 않는다
+                    ex = next((e for k, e in enumerate(exs or []) if e["idx"] == a["idx"] and k not in shown), None)
+                    if ex:
+                        out.append(f"  - 예: {ex['text']}" + (f" (영상 {fmt_t(ex['t'])})" if ex["source"] == "video" and ex.get("t") is not None
+                                                             else " *(만든 예시)*" if ex["source"] == "made" else ""))
             out.append("")
         if ov.get("takeaways"):
             out += ["## 가져갈 것", ""] + [f"- {_line(x)}{_cite(x, sections)}" for x in ov["takeaways"]] + [""]
@@ -889,11 +1218,18 @@ class Engine:
             log(f"  구간 {k + 1}: [{fmt_t(sec['start'])}] {s['title']} — 요점 {len(s['points'])}, 화면 {len(s['frames'])}")
             secs.append(s)
             prev = s["title"]
-        ov = overview(llm, src, secs, out_lang=out_lang, purpose=purpose, focus=focus)
+        log("  용어·기준 → 검토 → 예시 → 다시 짜기")
+        terms = concepts(llm, src, secs, out_lang=out_lang)
+        terms, rv = review_concepts(llm, src, terms, secs, tr.segments, out_lang=out_lang)
+        exs = examples(llm, src, secs, out_lang=out_lang)
+        story = restructure(llm, src, secs, terms=terms, exs=exs, out_lang=out_lang, budget=12000 if backend == "claude" else 4200)
+        ov = overview(llm, src, secs, out_lang=out_lang, purpose=purpose, focus=focus, terms=terms)
         art = article(llm, src, secs, ov, out_lang=out_lang, focus=focus) if purpose == "share" else None
         return {"source": src.to_dict(), "transcript": {"source": tr.source, "lang": tr.lang, "stt": tr.stt},
                 "structure": struct, "purpose": purpose, "focus": focus, "overview": ov, "article": art, "sections": secs,
-                "markdown": to_markdown(src, ov, secs, transcript_source=tr.source, lang=tr.lang or "", structure=struct, art=art)}
+                "concepts": terms, "conceptReview": rv, "examples": exs, "story": story,
+                "markdown": to_markdown(src, ov, secs, transcript_source=tr.source, lang=tr.lang or "", structure=struct, art=art,
+                                        terms=terms, exs=exs, story=story)}
 
 
 def default_engine(*, stt_url: Optional[str] = None, local_url: Optional[str] = None, local_vision: Optional[bool] = None,

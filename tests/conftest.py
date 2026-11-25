@@ -145,6 +145,33 @@ class FakeLLM:
         if "body" in props:
             self.calls.append("article")
             return {"title": "공유 글 제목", "body": "공유 글 본문입니다."}
+        if "terms" in props:                              # 용어·기준: 목록형 하나(항목 하나 빠짐) + 영상 밖 일반 정의 하나
+            self.calls.append("concepts")
+            return {"terms": [{"term": "역량 세 가지", "kind": "기준·목록", "definition": "세 가지 역량이다.", "source": "video", "n": 1,
+                               "items": [{"name": "엔지니어링", "meaning": "만드는 힘", "from_video": True}, {"name": "비즈니스", "meaning": "문제를 푸는 힘", "from_video": True}]},
+                              {"term": "SVPG", "kind": "약어", "definition": "제품 관리 자료 사이트다.", "source": "general", "n": 1, "items": []}]}
+        if "reviews" in props:                            # 검토: 목록형의 빠진 항목을 채운다
+            self.calls.append("review")
+            assert "원문 근거:" in user
+            return {"reviews": [{"n": 1, "ok": False, "problem": "세 가지인데 둘만 있음", "definition": "세 가지 역량이다.", "source": "video",
+                                 "items": [{"name": "엔지니어링", "meaning": "만드는 힘", "from_video": True}, {"name": "비즈니스", "meaning": "문제를 푸는 힘", "from_video": True},
+                                           {"name": "스피릿", "meaning": "끝까지 버티는 힘", "from_video": False}]},
+                                {"n": 2, "ok": True, "problem": "", "definition": "제품 관리 자료 사이트다.", "source": "general", "items": []}]}
+        if "parts" in props:                              # 다시 짜기: 해석 하나, 예시 번호 하나, 범위 밖 예시 번호는 버림
+            self.calls.append("restructure")
+            assert "예시:" in user and "용어·기준 (검토함):" in user
+            return {"lead": "교육으로 절반은 된다.", "lead_from": [1],
+                    "parts": [{"question": "무엇이 필요한가", "heading": "필요한 것", "blocks": [
+                                  {"kind": "point", "text": "역량은 세 가지다.", "sub": ["엔지니어 링: 만드는 힘", "비즈니스", "스피릿"], "from": [1, 99], "ex": 0},
+                                  {"kind": "example", "text": "", "sub": [], "from": [], "ex": 1},
+                                  {"kind": "example", "text": "", "sub": [], "from": [], "ex": 7},
+                                  {"kind": "example", "text": "", "sub": [], "from": [], "ex": 1}]},
+                              {"question": "왜 어려운가", "heading": "어렵게 만드는 것", "blocks": [
+                                  {"kind": "interpret", "text": "끈기가 중심이다.", "sub": [], "from": [1], "ex": 0}]}],
+                    "by_role": [{"who": "개발자", "todo": "안 써 본 스택을 써 본다.", "from": [1]}]}
+        if "examples" in props:
+            self.calls.append("examples")
+            return {"examples": [{"n": 1, "source": "made", "text": "어느 고객사에 들어간 FDE가 처음 보는 스택을 하루 만에 익힌다.", "at": ""}]}
         if "lines" in props:                              # 문체 고치기: "~봄" → "~본다"
             self.calls.append("style")
             import re
