@@ -1,0 +1,7 @@
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+# 공개 저장소에 넣지 않는 기록 (공용 규칙: 원문·남의 화면 제외)
+docs/history/**/refs/
+docs/history/**/*.srt

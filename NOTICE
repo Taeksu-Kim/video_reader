@@ -1,0 +1,22 @@
+video_reader
+Copyright 2026 Taeksu Kim
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Included in this repository:
+- Pretendard (SIL Open Font License 1.1, https://github.com/orioncactus/pretendard) — unmodified font files in
+  video_reader/static/fonts/ with their license (video_reader/static/fonts/LICENSE.txt).
+- Icon paths in video_reader/static/index.html are from Lucide (ISC License, https://lucide.dev).
+
+Third-party software this code depends on (installed separately, not included in this repository):
+- doc_reader (Apache-2.0, https://github.com/Taeksu-Kim/doc_reader) — the `doc_parser.a2a` A2A endpoint.
+- stt (Apache-2.0, https://github.com/Taeksu-Kim/stt) — optional, transcribes videos without human-made subtitles (called over A2A).
+- FastAPI, Starlette, Uvicorn, httpx (MIT / BSD) — the server.
+- FFmpeg (LGPL-2.1+ / GPL depending on the build) — called as an external program.
+- yt-dlp (Unlicense) — called as an external program for video addresses.
+- Summarizers (one or both): a local LLM served by vLLM (Apache-2.0) with an OpenAI-compatible API, or the Claude Code CLI.
+- Optional: pytest (MIT), Playwright (Apache-2.0), Pillow (MIT-CMU) for tests, the browser check and screenshots.
+
+Screenshots and example outputs in docs/ show frames and summaries of publicly available YouTube videos
+(TED "Inside the Mind of a Master Procrastinator" — CC BY-NC-ND 4.0; 까칠한AI; 길벗 IT 전문서) for documentation only.
+Their uploader subtitle files are not included.

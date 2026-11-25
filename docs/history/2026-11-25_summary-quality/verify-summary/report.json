@@ -1,0 +1,211 @@
+{
+ "url": "http://127.0.0.1:8777/#job=9a7a185e230a",
+ "ready": ".tldr li",
+ "widths": {
+  "390": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 338,
+    "text_blocks": 29,
+    "long_blocks_over_60": [
+     "황현태(까칠한AI)는 FDE 역량 가운데 엔지니어링 실력과 비즈니스 마인…",
+     "FDE를 다른 직군과 결정적으로 가르는 것은 끝까지 문제를 풀어내는 끈기…",
+     "기획·컨설팅 역량은 토이 프로젝트로는 생기지 않고, 작은 규모라도 돈을 …"
+    ],
+    "digit_ratio": 0.08
+   }
+  },
+  "768": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 763,
+    "text_blocks": 36,
+    "long_blocks_over_60": [
+     "황현태(까칠한AI)는 FDE 역량 가운데 엔지니어링 실력과 비즈니스 마인…",
+     "FDE를 다른 직군과 결정적으로 가르는 것은 끝까지 문제를 풀어내는 끈기…",
+     "기획·컨설팅 역량은 토이 프로젝트로는 생기지 않고, 작은 규모라도 돈을 …",
+     "황현태는 8주 FDE 아카데미를 운영하면서 현장에서 느끼는 부담감·속도감…",
+     "FDE로 전직하기 전에 코딩 실력·고객 대응·문제 정의 가운데 자신의 강…",
+     "기획 역량을 쌓으려면 엔터프라이즈급이 아니어도 되니 돈을 받는 프리랜서나…"
+    ],
+    "digit_ratio": 0.04
+   }
+  },
+  "1280": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 1151,
+    "text_blocks": 75,
+    "long_blocks_over_60": [
+     "황현태(까칠한AI)는 FDE 역량 가운데 엔지니어링 실력과 비즈니스 마인…",
+     "FDE를 다른 직군과 결정적으로 가르는 것은 끝까지 문제를 풀어내는 끈기…",
+     "기획·컨설팅 역량은 토이 프로젝트로는 생기지 않고, 작은 규모라도 돈을 …",
+     "황현태는 8주 FDE 아카데미를 운영하면서 현장에서 느끼는 부담감·속도감…",
+     "FDE로 전직하기 전에 코딩 실력·고객 대응·문제 정의 가운데 자신의 강…",
+     "기획 역량을 쌓으려면 엔터프라이즈급이 아니어도 되니 돈을 받는 프리랜서나…",
+     "AI 에이전트가 어디까지 할 수 있는지 알고 싶다면 스탠포드 CS329Z…"
+    ],
+    "digit_ratio": 0.05
+   },
+   "detail": {
+    "fontSizes": [
+     12,
+     13,
+     15,
+     16,
+     18,
+     22
+    ],
+    "fontSizeCount": 6,
+    "offScaleSpacing": [],
+    "spacingValues": "2,4,6,8,12,16,20,24,28,32,36,40,48",
+    "offGridSpacing": [],
+    "offGridRatio": 0,
+    "lowContrast": [],
+    "lowContrastCount": 0,
+    "weakBoundary": [
+     {
+      "el": "li",
+      "n": 14,
+      "ratio": 1.2,
+      "size": "820×67",
+      "text": "01:00처음 정한 원칙: 현"
+     },
+     {
+      "el": "button",
+      "n": 12,
+      "ratio": 1.19,
+      "size": "91×32",
+      "text": "필요할 때"
+     },
+     {
+      "el": "div",
+      "n": 8,
+      "ratio": 1.2,
+      "size": "68×56",
+      "text": "길이12:45"
+     },
+     {
+      "el": "span.mini",
+      "n": 5,
+      "ratio": 1.21,
+      "size": "276×30",
+      "text": ""
+     },
+     {
+      "el": "a.btn",
+      "n": 2,
+      "ratio": 1.47,
+      "size": "70×31",
+      "text": "원본"
+     },
+     {
+      "el": "span.can",
+      "n": 1,
+      "ratio": 1.32,
+      "size": "16×20",
+      "text": ""
+     },
+     {
+      "el": "form.feed",
+      "n": 1,
+      "ratio": 1.48,
+      "size": "276×473",
+      "text": "영상 주소나 파일 경로 (줄마"
+     },
+     {
+      "el": "a.job",
+      "n": 1,
+      "ratio": 1.19,
+      "size": "300×128",
+      "text": "FDE, 교육으로 키울 수 있"
+     },
+     {
+      "el": "article.sheet",
+      "n": 1,
+      "ratio": 1.3,
+      "size": "916×2276",
+      "text": "FDE, 교육으로 키울 수 있"
+     },
+     {
+      "el": "header.label",
+      "n": 1,
+      "ratio": 1.4,
+      "size": "916×159",
+      "text": "FDE, 교육으로 키울 수 있"
+     },
+     {
+      "el": "dl.facts",
+      "n": 1,
+      "ratio": 1.29,
+      "size": "708×58",
+      "text": "길이12:45글업로더 자막 ("
+     },
+     {
+      "el": "button.btn",
+      "n": 1,
+      "ratio": 1.47,
+      "size": "30×30",
+      "text": ""
+     }
+    ],
+    "weakBoundaryKinds": 15,
+    "focusables": 69,
+    "tabBackJumps": [
+     {
+      "from": "INPUT",
+      "to": "정리하기"
+     },
+     {
+      "from": "Inside the Mind of a",
+      "to": "원본"
+     }
+    ],
+    "numericCells": 0,
+    "numericNotTabular": 0,
+    "focusNoRing": [],
+    "focusRingClipped": []
+   },
+   "craft": {
+    "font": "Pretendard",
+    "sizes": "12,13,15,16,18,22",
+    "weights": "400,500,600",
+    "mainSize": 13,
+    "mainLH": 1.5,
+    "icons": 7,
+    "glyphIcons": 0,
+    "borderedBoxes": 11,
+    "shadows": 4,
+    "monoLabels": 0,
+    "chars": 1151
+   }
+  }
+ },
+ "dark": null,
+ "zoom": {},
+ "notes": []
+}

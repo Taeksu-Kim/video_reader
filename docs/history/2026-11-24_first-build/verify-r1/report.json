@@ -1,0 +1,252 @@
+{
+ "url": "http://127.0.0.1:8777/#job=061e629a90b7",
+ "ready": ".cut .pts",
+ "widths": {
+  "390": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [
+     "a \"02:34\"",
+     "button \"03:16 화면 크게 보기\"",
+     "img \"\"",
+     "figcaption \"03\n03:16\"",
+     "b \"03\"",
+     "a \"03:16\"",
+     "a \"05:08\"",
+     "button \"05:38 화면 크게 보기\"",
+     "img \"\"",
+     "figcaption \"06\n05:38\"",
+     "b \"06\"",
+     "a \"05:38\""
+    ],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 362,
+    "text_blocks": 28,
+    "long_blocks_over_60": [
+     "그림을 받지 않게 떠 있습니다 (--limit-mm-per-prompt …"
+    ],
+    "digit_ratio": 0.04
+   }
+  },
+  "768": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 471,
+    "text_blocks": 46,
+    "long_blocks_over_60": [
+     "그림을 받지 않게 떠 있습니다 (--limit-mm-per-prompt …"
+    ],
+    "digit_ratio": 0.06
+   }
+  },
+  "1280": {
+   "readyFound": true,
+   "consoleErrors": [],
+   "brokenValues": [],
+   "horizontalScroll": false,
+   "layout": {
+    "overflow": [],
+    "small": [],
+    "overlap": []
+   },
+   "text": {
+    "first_screen_chars": 1339,
+    "text_blocks": 81,
+    "long_blocks_over_60": [
+     "그림을 받지 않게 떠 있습니다 (--limit-mm-per-prompt …",
+     "이 영상은 2차원 리스트의 구조를 아파트의 층(행)과 호수(열)에 비유하…",
+     "2차원 리스트는 가로·세로 형태로 이루어지며 행(row)과 열(colum…",
+     "2차원 리스트는 리스트 안에 리스트를 넣어 만들고, 안쪽 리스트들은 쉼표…",
+     "예: a = [[10, 20], [30, 40], [50, 60]]이면 …"
+    ],
+    "digit_ratio": 0.08
+   },
+   "detail": {
+    "fontSizes": [
+     12,
+     13,
+     15,
+     16,
+     18,
+     22
+    ],
+    "fontSizeCount": 6,
+    "offScaleSpacing": [],
+    "spacingValues": "2,4,6,8,12,16,20,24,28,32,80",
+    "offGridSpacing": [
+     "237px×1"
+    ],
+    "offGridRatio": 0,
+    "lowContrast": [],
+    "lowContrastCount": 0,
+    "weakBoundary": [
+     {
+      "el": "a.btn",
+      "n": 2,
+      "ratio": 1.58,
+      "size": "70×31",
+      "text": "원본"
+     },
+     {
+      "el": "form.feed",
+      "n": 1,
+      "ratio": 1.27,
+      "size": "284×446",
+      "text": "영상 주소나 이 PC의 파일 "
+     },
+     {
+      "el": "div.note",
+      "n": 1,
+      "ratio": 1.1,
+      "size": "260×79",
+      "text": "화면 읽기 잠김 — 화면은 캡"
+     },
+     {
+      "el": "a.job",
+      "n": 1,
+      "ratio": 1.27,
+      "size": "284×108",
+      "text": "[파이썬 강의] UNIT 23"
+     },
+     {
+      "el": "article.sheet",
+      "n": 1,
+      "ratio": 1.27,
+      "size": "926×1724",
+      "text": "[파이썬 강의] UNIT 23"
+     },
+     {
+      "el": "header.label",
+      "n": 1,
+      "ratio": 1.23,
+      "size": "926×128",
+      "text": "[파이썬 강의] UNIT 23"
+     },
+     {
+      "el": "button.btn",
+      "n": 1,
+      "ratio": 1.58,
+      "size": "30×30",
+      "text": ""
+     },
+     {
+      "el": "div.over",
+      "n": 1,
+      "ratio": 1.23,
+      "size": "926×353",
+      "text": "개요다시 만들기이 영상은 2차"
+     },
+     {
+      "el": "section.cut",
+      "n": 1,
+      "ratio": 1.23,
+      "size": "926×813",
+      "text": "0101:04\n    0202"
+     },
+     {
+      "el": "div.seen",
+      "n": 1,
+      "ratio": 1.1,
+      "size": "638×323",
+      "text": "화면에서 읽은 것01:04슬라"
+     }
+    ],
+    "weakBoundaryKinds": 10,
+    "focusables": 54,
+    "tabBackJumps": [
+     {
+      "from": "Inside the Mind of a",
+      "to": "stt에서 고치기"
+     },
+     {
+      "from": "stt에서 고치기",
+      "to": "원본"
+     },
+     {
+      "from": "03:16",
+      "to": "00:11"
+     },
+     {
+      "from": "05:38",
+      "to": "03:39"
+     }
+    ],
+    "numericCells": 6,
+    "numericNotTabular": 0,
+    "focusNoRing": [],
+    "focusRingClipped": []
+   },
+   "craft": {
+    "font": "Pretendard",
+    "sizes": "12,13,15,16,18,22",
+    "weights": "400,500,600",
+    "mainSize": 13,
+    "mainLH": 1.5,
+    "icons": 9,
+    "glyphIcons": 0,
+    "borderedBoxes": 11,
+    "shadows": 3,
+    "monoLabels": 0,
+    "chars": 1339
+   }
+  }
+ },
+ "dark": null,
+ "zoom": {
+  "head": {
+   "ok": true,
+   "file": "zoom-head.png",
+   "scale": 1.69,
+   "px": [
+    1568,
+    216
+   ],
+   "note": ""
+  },
+  "cut": {
+   "ok": true,
+   "file": "zoom-cut.png",
+   "scale": 1.69,
+   "px": [
+    1568,
+    1377
+   ],
+   "note": ""
+  },
+  "feed": {
+   "ok": true,
+   "file": "zoom-feed.png",
+   "scale": 2.0,
+   "px": [
+    568,
+    892
+   ],
+   "note": ""
+  },
+  "list": {
+   "ok": true,
+   "file": "zoom-list.png",
+   "scale": 2.0,
+   "px": [
+    568,
+    434
+   ],
+   "note": ""
+  }
+ },
+ "notes": []
+}

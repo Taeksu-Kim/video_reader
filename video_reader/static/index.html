@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>video_reader</title>
+<style>
+@font-face{font-family:Pretendard;src:url(/static/fonts/Pretendard-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:Pretendard;src:url(/static/fonts/Pretendard-Medium.ttf) format("truetype");font-weight:500;font-display:swap}
+@font-face{font-family:Pretendard;src:url(/static/fonts/Pretendard-SemiBold.ttf) format("truetype");font-weight:600;font-display:swap}
+/* 콘셉트 카드 docs/design/concept.md — 밀착 인화지 */
+:root{
+  /* 층 (콘셉트 카드 규칙 5): 라이트 테이블 위에 떠 있는 판 둘 — 필름 보관함(넣기·목록)과 인화지(결과) */
+  --table:#DCE3E3;          /* 바닥: 라이트 테이블 (청록으로 물들인 중립, C3 — 사용자 선택 2026-11-25) */
+  --console:#0F2C2E; --console-2:#17393B; --console-line:#5A7C7E;   /* 필름 보관함 판 (청록 톤온톤) */
+  --console-deep:#0A2224; --console-rule:#24484A; --console-hover:#163638;
+  --on-console:#EEF6F6; --on-console-2:#A6C3C4;
+  --sheet:#FFFFFF; --sheet-head:#F3F7F7;   /* 인화지 / 그 위 라벨 띠(조작층) */
+  --film:#16171A; --film-cell:#2A2C31; --film-hole:#E6E7E9;   /* 필름 (규칙 1) */
+  --edge:#E9A23B;           /* 필름 위 가장자리 인쇄 = 시각 (규칙 2) */
+  --time:#8A5300;           /* 인화지 위 시각 (규칙 2) */
+  --pencil:#D2322D;         /* 사람이 고친 것 (규칙 3) */
+  --accent:#0F767A; --accent-hover:#0A5B5F; --accent-soft:#E6F5F5; --accent-on-console:#6CC6CA; --accent-ink:#06282A;   /* 주 색: 주 동작·선택·포커스 */
+  --ink:#16181C; --ink-2:#464B53; --ink-3:#6B717C;           /* 본문 / 보조 / 메타 */
+  --ink-3t:#4F545C;          /* 바닥 위 보조 글자 (4.5:1) */
+  --line:#E6EBEB; --line-2:#D3DCDC;
+  --ctl:#C9CED4; --ctl-strong:#8C929B; --wash:#F3F4F6; --hover:#EEF0F2;
+  --focus:var(--accent);
+  --r-ctl:6px; --r-sheet:6px; --r-float:12px;
+  --gap-text:4px; --gap-chip:6px; --gap-part:12px; --gap-edge:16px;
+  --pad-sheet:48px;          /* 인화지 안쪽 가장자리 — 머리·개요·구간이 같은 세로선 */
+  --shadow-float:0 1px 2px rgba(20,22,26,.05),0 6px 16px rgba(20,22,26,.06),0 24px 48px rgba(20,22,26,.07);
+  --shadow-film:0 1px 1px rgba(10,11,13,.25),0 6px 14px rgba(10,11,13,.16);
+  --shadow-low:0 1px 3px rgba(20,22,26,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--table);color:var(--ink);font:400 15px/1.5 Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h1[tabindex]:focus{outline:none}
+::selection{background:#F6DDB0;color:var(--ink)}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* 버튼 한 쌍 */
+a.btn{color:var(--ink);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ctl);background:#fff;border-radius:var(--r-ctl);padding:6px 12px;
+  font-size:13px;font-weight:500;cursor:pointer;line-height:1.3;white-space:nowrap}
+.btn:hover{background:var(--hover)} .btn:active{background:#E4E7EA}
+.btn[disabled]{color:#A3A8B0;cursor:not-allowed;background:#fff}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--ink-2);padding:4px 8px}
+.btn.quiet:hover{background:var(--hover);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;justify-content:center}
+.btn.primary:hover{background:var(--accent-hover)} .btn.primary[disabled]{background:#9AA0A8;border-color:#9AA0A8;color:#fff}
+.btn.icon{padding:6px}
+
+/* 셸 — 바닥 위 두 판 */
+.app{display:grid;grid-template-columns:316px minmax(0,1fr);min-height:100vh;gap:16px;padding:var(--gap-edge)}
+aside{background:var(--console);color:var(--on-console);border-radius:var(--r-float);padding:20px 20px 20px 20px;display:flex;flex-direction:column;gap:20px;
+  position:sticky;top:var(--gap-edge);height:calc(100vh - var(--gap-edge) * 2);overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,.12),0 10px 28px rgba(20,22,26,.14)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:2px 0 0;color:var(--on-console)}
+.brand .can{width:16px;height:20px;background:#0B0C0D;border-radius:2px;position:relative;box-shadow:inset 0 0 0 1px #3A3D43}
+.brand .can:after{content:"";position:absolute;left:4px;right:4px;top:5px;bottom:5px;background:#D9DCE0;border-radius:1px}
+
+.feed{display:flex;flex-direction:column;gap:12px;padding:0 0 20px;border-bottom:1px solid var(--console-rule)}
+#feedErr:empty,#lockNote:empty,#deps:empty{display:none}
+.feed textarea{width:100%;background:var(--console-deep);color:var(--on-console);border:1px solid var(--console-line);border-radius:var(--r-ctl);padding:8px 12px;font-size:15px;line-height:1.45;resize:none;min-height:64px;field-sizing:content;max-height:200px}
+.feed textarea::placeholder{color:#8C929B}
+.feed textarea:focus{border-color:var(--accent-on-console)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:13px;color:var(--on-console-2)}
+.seg{display:flex;border:1px solid var(--console-line);border-radius:var(--r-ctl);overflow:hidden}
+.seg button{flex:1;border:0;background:transparent;color:var(--on-console-2);padding:6px 8px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.seg button+button{border-left:1px solid var(--console-line)}
+.seg button:focus-visible{outline-offset:-3px}
+.seg button:hover{background:var(--console-2);color:var(--on-console)}
+.seg button[aria-pressed=true]{background:var(--console-2);color:var(--on-console);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent-on-console)}
+.seg button.locked{color:#8C929B}
+.seg button.locked[aria-pressed=true]{color:var(--on-console-2);box-shadow:inset 0 -2px 0 #6B7078}
+aside .btn.primary{background:var(--accent-on-console);border-color:var(--accent-on-console);color:var(--accent-ink)}
+aside .btn.primary:hover{background:#8FD6D9}
+aside :focus-visible{outline-color:var(--accent-on-console)}
+.note{font-size:13px;color:var(--on-console-2);line-height:1.5;background:var(--console-2);border-radius:var(--r-ctl);padding:8px 12px}
+.note b{font-weight:600;color:var(--on-console)}
+.note details{margin-top:4px} .note summary{cursor:pointer;color:var(--on-console-2);list-style:none;display:inline-flex;align-items:center;gap:4px}
+.note summary::-webkit-details-marker{display:none} .note details[open] summary svg{transform:rotate(180deg)}
+.note details p{margin:4px 0 0;color:var(--on-console-2);font-size:12px}
+.more{font-size:13px;color:var(--on-console-2)} .more summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px}
+.more[open] summary svg{transform:rotate(180deg)} .more summary::-webkit-details-marker{display:none}
+.more summary:hover{color:var(--on-console)}
+.focus{width:100%;background:var(--console-deep);color:var(--on-console);border:1px solid var(--console-line);border-radius:var(--r-ctl);padding:6px 12px;font-size:13px}
+.focus::placeholder{color:#8C9EA0} .focus:focus{border-color:var(--accent-on-console)}
+.chk{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--on-console-2);font-size:13px;cursor:pointer}
+.chk input{accent-color:var(--accent-on-console);width:16px;height:16px;margin:0}
+.more input:not([type=checkbox]){width:100%;background:var(--console-deep);color:var(--on-console);border:1px solid var(--console-line);border-radius:var(--r-ctl);padding:6px 8px;font-size:13px;margin-top:6px}
+.err{color:#F3D2D0;font-size:13px;background:#3A2425;border-radius:var(--r-ctl);padding:8px 12px}
+
+.deps{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--on-console-2)}
+.dep{display:flex;align-items:center;gap:8px}
+.deps-head{display:flex;justify-content:space-between;align-items:center} .deps-head button{border:0;background:none;padding:4px 0;margin:-4px 0;color:var(--on-console);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:13px}
+.dot{width:7px;height:7px;border-radius:50%;background:#8C929B;flex:none} .dot.ok{background:#4FB283}
+.dep button{border:0;background:none;padding:4px 2px;margin:-4px 0;color:var(--on-console);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:13px}
+
+.lab{font-size:13px;color:var(--on-console-2);padding:0;display:flex;justify-content:space-between}
+.jobs{display:flex;flex-direction:column;gap:4px;margin:-12px -12px 0}
+.job{display:block;text-decoration:none;color:inherit;padding:12px;border-radius:8px}
+.job:hover{background:var(--console-hover)}
+.job:focus-visible{outline-offset:-2px}
+.job[aria-current=true]{background:var(--console-2);box-shadow:inset 0 1px 0 rgba(238,246,246,.08),0 1px 2px rgba(0,0,0,.2)}
+.job[aria-current=true] .jt{font-weight:600}
+.jt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:500;font-size:15px;line-height:1.4;color:var(--on-console)}
+.jm{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:13px;color:var(--on-console-2);margin-top:4px}
+.jm .bad{color:#F3D2D0}
+.mini{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;width:max-content;max-width:100%;background:var(--film);padding:4px 6px;border-radius:2px;box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.mini i{width:14px;height:9px;border-radius:2px;background:#3A3D43}
+.mini i.dev{background:#D9DCE0} .mini i.dim{background:#7A7F88} .mini i.wait{background:transparent;box-shadow:inset 0 0 0 1px #5A5E66}
+.key{display:inline-flex;align-items:center;gap:4px;margin-left:8px}
+.sw{display:inline-block;width:10px;height:7px;border-radius:1px;background:#3A3D43} .sw.dev{background:#D9DCE0} .sw.dim{background:#7A7F88}
+.mini i.run{background:transparent;box-shadow:inset 0 0 0 1px var(--edge)}
+
+/* 인화지 — 위는 라벨 띠(조작층), 아래는 정리 본문(읽기층) */
+main{min-width:0}
+.sheet{background:var(--sheet);max-width:1120px;border-radius:var(--r-sheet);box-shadow:var(--shadow-float);overflow:clip}
+.label{background:var(--sheet-head);padding:28px var(--pad-sheet) 24px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 32px;align-items:start;border-bottom:1px solid var(--line-2)}
+h1{grid-column:1;grid-row:1;margin:0;font-size:22px;line-height:1.35;font-weight:600;letter-spacing:-.015em;text-wrap:pretty}
+.facts{grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap;gap:1px;margin:4px 0 0;font-size:13px;background:var(--line-2);border:1px solid var(--line-2);border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
+.facts div{display:flex;flex-direction:column;gap:2px;padding:8px 16px;background:var(--sheet);flex:1 1 auto} .facts dt{color:var(--ink-3);font-size:12px} .facts dd{margin:0;color:var(--ink);font-weight:500}
+.facts a{color:var(--ink);text-underline-offset:2px;padding:4px 0;margin:-4px 0;display:inline-block}
+.label>*{min-width:0}
+.tools{grid-column:2;grid-row:1;display:flex;flex-wrap:nowrap;gap:6px;align-items:center;margin-top:2px}
+
+.band{padding:12px var(--pad-sheet);border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:12px;font-size:15px;background:var(--sheet-head)}
+.band .grow{flex:1;min-width:0}
+.band.fail{background:#FBF0EF}
+.band .why{color:var(--ink-2);font-size:13px;margin-top:2px}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid #C9CED4;border-top-color:var(--accent);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.warns{padding:12px var(--pad-sheet);border-bottom:1px solid var(--line-2);font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:2px;background:var(--sheet-head)}
+
+.over{padding:36px var(--pad-sheet) 40px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:48px;border-bottom:1px solid var(--line)}
+.over>div+div{border-left:1px solid var(--line);padding-left:32px;margin-left:-16px}
+.over h2{min-height:30px;margin:0 0 8px}
+.tabs{display:flex;gap:4px;padding:0 var(--pad-sheet);background:var(--sheet-head);border-bottom:1px solid var(--line-2)}
+.tabs button{border:0;background:none;padding:12px 16px;font-size:15px;font-weight:500;color:var(--ink-2);cursor:pointer;display:inline-flex;gap:8px;align-items:baseline;box-shadow:inset 0 -2px 0 transparent}
+.tabs button span{font-size:12px;color:var(--ink-3);font-weight:400}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+.tabs button:focus-visible{outline-offset:-3px}
+.answers{padding:32px var(--pad-sheet) 36px;border-bottom:1px solid var(--line)}
+.answers h2,.mentions h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink-3)}
+.answers ol{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.answers li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;padding:8px 0;border-top:1px solid var(--line)}
+.answers li:first-child{border-top:0}
+.answers li .tc{justify-self:start;align-self:start;margin-top:0}
+.answers p{margin:2px 0 0;font-size:15px;line-height:1.7;color:var(--ink-2)}
+.jump{border:0;background:none;padding:0;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.jump:hover{text-decoration:underline;text-underline-offset:2px}
+.mentions{padding:28px var(--pad-sheet) 32px;border-bottom:1px solid var(--line);background:var(--sheet-head)}
+.mentions header{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;margin-bottom:12px} .mentions header h2{margin:0}
+.cov{font-size:13px;color:var(--ink-3)}
+.mentions dl{margin:0;display:grid;gap:8px}
+.mentions dl div{display:grid;grid-template-columns:88px minmax(0,1fr);gap:16px}
+.mentions dt{font-size:13px;color:var(--ink-3);padding-top:2px}
+.mentions dd{margin:0;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.mn{display:inline-flex;align-items:baseline;gap:6px}
+.mini-tc{font-size:12px}
+.mn small{display:block;font-size:12px;color:var(--ink-3);line-height:1.4}
+.mn em{font-style:normal;font-size:12px;font-weight:500;color:var(--ink-2);margin-left:6px;padding:0 6px;border:1px dashed var(--ctl-strong);border-radius:4px}
+.cite{display:inline-flex;gap:4px;margin-left:8px;vertical-align:1px}
+.cite button{border:1px solid var(--line-2);background:var(--sheet);border-radius:4px;padding:0 6px;font:500 12px/20px Pretendard,sans-serif;color:var(--ink-3);cursor:pointer;font-variant-numeric:tabular-nums}
+.cite button:hover{color:var(--accent);border-color:var(--accent)}
+.pts .sub{margin:4px 0 2px;padding-left:16px;list-style:none;color:var(--ink-2);font-size:15px;line-height:1.7}
+.pts .sub li{position:relative;padding:1px 0} .pts .sub li:before{content:"";position:absolute;left:-12px;top:.85em;width:5px;height:1px;background:var(--ink-3)}
+.tldr{padding:32px var(--pad-sheet) 0}
+.tldr h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--ink-3)}
+.tldr ol{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:t}
+.tldr li{counter-increment:t;display:grid;grid-template-columns:28px minmax(0,1fr);font-size:18px;font-weight:600;line-height:1.5;letter-spacing:-.01em;text-wrap:pretty}
+.tldr li:before{content:counter(t);color:var(--accent);font-size:15px;line-height:27px}
+.gist{margin:0 0 12px;font-size:16px;line-height:1.7;color:var(--ink);padding-left:12px;border-left:2px solid var(--accent)}
+.article{padding:32px var(--pad-sheet) 36px;border-bottom:1px solid var(--line);background:var(--sheet-head)}
+.article header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.article header h2{margin:0;font-size:13px;font-weight:600;color:var(--ink-3)}
+.article h3{margin:0 0 12px;font-size:18px;font-weight:600}
+.art-body{white-space:pre-line;font-size:16px;line-height:1.8;max-width:68ch}
+.art-src{margin:16px 0 0;font-size:13px;color:var(--ink-3)}
+.egist{border:1px solid var(--ctl);border-radius:var(--r-ctl);padding:6px 12px;font-size:15px;line-height:1.6;resize:vertical}
+.over h2,.seen h3,.tr h3{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.over p{margin:0;font-size:16px;line-height:1.85;max-width:62ch;text-wrap:pretty}
+.over ul{margin:0;padding-left:16px;font-size:15px;line-height:1.65} .over li{margin-bottom:8px} .over li::marker{color:var(--ink-3)}
+.over .wait{color:var(--ink-3);font-size:15px}
+.over h2 .btn{margin-left:auto}
+
+.cut{display:grid;grid-template-columns:216px minmax(0,1fr);gap:40px;padding:40px var(--pad-sheet) 44px;border-bottom:1px solid var(--line);position:relative}
+.cut:last-child{border-bottom:0}
+.strip{min-width:0;position:sticky;top:24px;align-self:start}
+.slate{display:flex;justify-content:space-between;gap:8px;margin-top:12px;font-size:12px;color:var(--ink-3)} .slate b{font-weight:600;color:var(--ink-2)}
+/* 필름 조각 — 인화지 위에 놓인 물건이라 자기 그림자 */
+.film{background:var(--film);padding:16px 24px 6px;position:relative;border-radius:3px;box-shadow:var(--shadow-film)}
+.film:before,.film:after{content:"";position:absolute;top:6px;bottom:6px;width:6px;opacity:.16;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='14'%3E%3Crect x='0' y='3' width='6' height='8' rx='1.5' fill='%23fff'/%3E%3C/svg%3E") repeat-y}
+.film:before{left:9px} .film:after{right:9px}
+.frame{margin:0 0 10px;display:block}
+.frame button{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in;border-radius:2px}
+.frame img,.frame .win{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+.frame.unread img{filter:grayscale(1) contrast(.85);opacity:.6}
+.frame .win{background:var(--film-cell);color:#9095A0;font-size:12px;display:grid;place-items:center;text-align:center;padding:6px}
+.frame .win.wait{background:transparent;box-shadow:inset 0 0 0 1px #4A4E55;color:#8D929B}
+.frame figcaption{display:flex;justify-content:space-between;align-items:center;color:var(--edge);font-size:12px;margin-top:6px;letter-spacing:.04em}
+.frame figcaption b{font-weight:600;padding:0 2px;border-radius:50%;color:#9AA0A8}
+.frame figcaption a{color:var(--edge);text-decoration:none;padding:4px 6px;margin:-4px -6px} .frame figcaption a:hover{text-decoration:underline}
+.cut.edited .frame:first-child figcaption b{box-shadow:0 0 0 2px var(--pencil);color:#fff}
+
+.notes{min-width:0}
+.notes header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:13px;min-height:30px;margin-top:-4px}
+.tc{color:var(--time);text-decoration:none;font-weight:500;font-size:13px;cursor:pointer;background:none;border:0;padding:4px 6px;margin:-4px -6px;border-radius:4px;min-height:24px}
+.tc{display:inline-flex;align-items:center;gap:4px;justify-content:flex-end}
+.tc svg.i{width:10px;height:10px;fill:currentColor;stroke:none;opacity:.75}
+.tc:hover{text-decoration:underline;text-underline-offset:2px}
+.mark{color:var(--pencil);font-weight:600}
+.range-end{color:var(--time);margin-left:-8px}
+.by{color:var(--ink-3)}
+.acts{margin-left:auto;display:flex;gap:2px}
+.notes h3.t{margin:6px 0 12px;font-size:18px;font-weight:600;line-height:1.4;text-wrap:balance}
+.pts{margin:0;padding:0;list-style:none}
+.pts li{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:24px;padding:6px 0;line-height:1.75;font-size:15px}
+.pts li .tc,.seen li .tc{align-self:start;justify-self:end;margin-top:-1px}
+.seen{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line-2)}
+.seen ul{margin:0;padding:0;list-style:none}
+.seen li{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:24px;font-size:15px;line-height:1.65;padding:4px 0}
+.seen li span{white-space:pre-line}
+.pts li>span,.seen li>span,.over li{text-wrap:pretty}
+.lockline{margin-top:12px;font-size:13px;color:var(--ink-3)}
+.skel{height:12px;border-radius:3px;background:linear-gradient(90deg,#EEF0F2,#F6F7F8,#EEF0F2);background-size:200% 100%;animation:sh 1.4s infinite;margin:12px 0}
+@keyframes sh{to{background-position:-200% 0}}
+.serr{margin-top:8px;font-size:13px;color:var(--ink-2)}
+
+.tr{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.tr ol{margin:0;padding:0;list-style:none;max-height:340px;overflow:auto}
+.tr li{display:grid;grid-template-columns:48px auto minmax(0,1fr);gap:8px;font-size:13px;line-height:1.6;padding:2px 0}
+.tr .who{color:var(--ink-3)}
+
+/* 고치기 */
+.edit{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.edit input.title{font-size:17px;font-weight:600;border:1px solid var(--ctl);border-radius:var(--r-ctl);padding:6px 8px}
+.erow{display:grid;grid-template-columns:62px minmax(0,1fr) 32px;gap:6px;align-items:start}
+.erow input{border:1px solid var(--ctl);border-radius:var(--r-ctl);padding:6px 6px;font-size:13px;text-align:center;color:var(--time)}
+.erow textarea{border:1px solid var(--ctl);border-radius:var(--r-ctl);padding:6px 8px;font-size:15px;line-height:1.6;resize:vertical;min-height:38px}
+.ebar{display:flex;gap:6px;align-items:center}
+.ebar .hint{font-size:13px;color:var(--ink-3);margin-left:auto}
+
+/* 빈 화면 */
+.empty{max-width:1120px;background:var(--sheet);border-radius:var(--r-sheet);box-shadow:var(--shadow-float);padding:48px var(--pad-sheet) 52px;display:grid;grid-template-columns:200px 1fr;gap:36px}
+.empty .demo{background:var(--film);padding:16px 24px 4px;position:relative;border-radius:3px;box-shadow:var(--shadow-film);align-self:start}
+.empty .demo:before,.empty .demo:after{content:"";position:absolute;top:0;bottom:0;width:7px;background:repeating-linear-gradient(to bottom,transparent 0 6px,var(--film-hole) 6px 11px,transparent 11px 16px)}
+.empty .demo:before{left:7px}.empty .demo:after{right:7px}
+.empty .demo div{aspect-ratio:16/9;margin-bottom:24px;border-radius:1px;background:var(--film-cell);display:grid;place-items:center;color:#9095A0;font-size:12px}
+.empty .demo div.lit{background:#8C9098;color:#1A1B1E}
+.empty h1{margin-bottom:12px}
+.empty ol{margin:16px 0 0;padding-left:20px;line-height:1.8;color:var(--ink-2)}
+.empty p{margin:0;color:var(--ink-2);line-height:1.7}
+
+/* 뜬 것: 메뉴·뷰어·그림 */
+.menu{position:fixed;z-index:20;background:#fff;border-radius:8px;box-shadow:0 4px 18px rgba(20,22,26,.16),0 0 0 1px rgba(20,22,26,.06);padding:4px;min-width:220px;max-width:300px}
+.menu button{display:flex;width:100%;gap:8px;align-items:flex-start;border:0;background:none;padding:8px 8px;border-radius:5px;text-align:left;cursor:pointer;font-size:13px}
+.menu button:hover,.menu button:focus-visible{background:var(--hover)}
+.menu button[disabled]{color:#9AA0A8;cursor:not-allowed;background:none}
+.menu small{display:block;color:var(--ink-3);font-size:12px;line-height:1.4}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.viewer{position:fixed;right:20px;bottom:20px;width:440px;max-width:calc(100vw - 40px);background:var(--film);border-radius:var(--r-float);box-shadow:0 8px 32px rgba(0,0,0,.28);overflow:hidden;z-index:15}
+.viewer header{display:flex;align-items:center;gap:8px;color:#D6D9DE;font-size:13px;padding:8px 8px 8px 12px}
+.viewer header .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer header .at{color:var(--edge)}
+.viewer header button{border:0;background:none;color:#D6D9DE;padding:4px;border-radius:4px;cursor:pointer;display:inline-flex}
+.viewer header button:hover{background:#30333A}
+.viewer iframe,.viewer video{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+dialog.pic{border:0;padding:0;background:transparent;max-width:92vw}
+dialog.pic::backdrop{background:rgba(16,17,19,.82)}
+dialog.pic img{max-width:92vw;max-height:84vh;display:block;border-radius:2px}
+dialog.pic p{color:#D6D9DE;font-size:13px;margin:8px 0 0;display:flex;gap:12px}
+dialog.pic p b{color:var(--edge);font-weight:500}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:30;box-shadow:var(--shadow-float)}
+
+@media (max-width:980px){
+  .app{grid-template-columns:1fr;padding:12px;gap:12px} aside{position:static;height:auto}
+  body.has-job main{order:-1}
+  :root{--pad-sheet:24px}
+  .over{grid-template-columns:1fr;gap:24px} .over>div+div{border-left:0;padding-left:0;margin-left:0;border-top:1px solid var(--line);padding-top:20px}
+  .cut{grid-template-columns:1fr;gap:16px} .strip{position:static} .film{position:static;display:flex;gap:12px;overflow:auto;padding:12px 24px 4px}
+  .film .frame{flex:0 0 170px}
+  .label{grid-template-columns:minmax(0,1fr)} .facts{width:auto} .tools{grid-column:1;grid-row:3;flex-wrap:wrap}
+  .empty{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  :root{--pad-sheet:16px}
+  .pts li,.seen li{grid-template-columns:minmax(0,1fr) 56px;gap:12px}
+  .tools .btn .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+}
+</style>
+</head>
+<body>
+<!-- 아이콘 경로: Lucide (ISC License, https://lucide.dev) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect width="14" height="14" x="5" y="5" rx="1"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+</svg>
+<div class="app">
+  <aside>
+    <div class="brand"><span class="can" aria-hidden="true"></span>video_reader</div>
+    <form class="feed" id="feed" autocomplete="off">
+      <label class="field"><span>영상 주소나 파일 경로 (줄마다 하나)</span>
+        <textarea id="ref" rows="2" placeholder="유튜브 주소 또는 /경로/영상.mp4"></textarea></label>
+      <div class="field"><span>정리하는 쪽</span><div class="seg" id="backend" role="group" aria-label="정리하는 쪽"></div></div>
+      <div class="field"><span>화면 보기</span><div class="seg" id="visual" role="group" aria-label="화면 보기">
+        <button type="button" data-v="auto" aria-pressed="true" title="말이 화면을 가리킬 때만 그 시각의 화면을 본다">필요할 때</button>
+        <button type="button" data-v="always" aria-pressed="false" title="모든 구간에서 화면을 본다">모든 구간</button>
+        <button type="button" data-v="never" aria-pressed="false" title="말만으로 정리한다">보지 않음</button></div></div>
+      <div class="field"><span>쓰임새</span><div class="seg" id="purpose" role="group" aria-label="쓰임새">
+        <button type="button" data-p="record" aria-pressed="true" title="빠짐없이 기록하고 세 줄 결론으로 판단 — 기본">기록·판단</button>
+        <button type="button" data-p="brief" aria-pressed="false" title="결론 위주로 짧게">빠른 판단</button>
+        <button type="button" data-p="share" aria-pressed="false" title="다른 사람과 나눌 글 한 편을 함께 씀">공유 글</button>
+        <button type="button" data-p="agent" aria-pressed="false" title="다른 에이전트가 읽을 구조 위주">에이전트</button></div></div>
+      <label class="field"><span>중점 (선택)</span><input id="focus" class="focus" maxlength="200" placeholder="예: 교육 커리큘럼 부분 위주로"></label>
+      <div id="lockNote"></div>
+      <details class="more"><summary><svg class="i" aria-hidden="true"><use href="#i-chev"/></svg>글·언어 설정</summary>
+        <label class="chk"><input type="checkbox" id="forceStt"> 자막이 있어도 stt로 받아 적기</label>
+        <label class="chk"><input type="checkbox" id="sttFresh"> stt가 예전에 받아 적은 것도 새로</label>
+        <input id="lang" placeholder="자막·받아 적기 언어 (비우면 영상 원래 언어) 예: en"></details>
+      <div id="feedErr"></div>
+      <button class="btn primary" id="go" type="submit">정리하기</button>
+    </form>
+    <div class="deps" id="deps" aria-live="polite"></div>
+    <div class="lab"><span>정리한 영상</span><span class="num" id="jobCount"></span></div>
+    <nav class="jobs" id="jobs" aria-label="정리한 영상"></nav>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="viewer"></div>
+<dialog class="pic" id="pic"><img alt=""><p></p></dialog>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const icon = (n, label) => `<svg class="i" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}><use href="#i-${n}"/></svg>`;
+const fmt = s => { s = Math.max(0, Math.floor(+s || 0)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}` : `${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
+const parseT = v => { const p = String(v).trim().split(":").map(Number); if (p.some(isNaN) || !p.length) return null; return p.reduce((a, b) => a * 60 + b, 0); };
+const BACK = {local: "로컬 LLM", claude: "Claude Code"};
+const LANGS = {ko: "한국어", en: "영어", ja: "일본어", zh: "중국어"};
+const SUBS = {uploader: "업로더 자막", embedded: "파일 안 자막", sidecar: "옆 자막 파일", stt: "stt가 받아 적음"};
+const FAIL = {llm_down: j => `${BACK[j.backend]}가 꺼져 있어 멈췄습니다`, stt_down: () => "stt가 꺼져 있어 멈췄습니다",
+  stt_failed: () => "받아 적기에 실패했습니다", fetch: () => "영상을 받지 못했습니다", bad_source: () => "주소·경로가 틀렸습니다",
+  overflow: () => "글이 모델 한도를 넘었습니다", bad_output: () => "모델 답의 형식이 틀렸습니다", llm_error: () => "모델 호출이 실패했습니다",
+  internal: () => "내부 오류로 멈췄습니다"};
+const failHead = j => (FAIL[j.errorKind] || (() => "멈췄습니다"))(j);
+const STATUS = {queued: "줄에서 기다림", running: "정리 중", done: "끝", failed: "멈춤", canceled: "취소됨"};
+
+const PURPOSE = {record: "기록·판단", brief: "빠른 판단", share: "공유 글", agent: "에이전트 입력"};
+const KINDS = ["책", "강의·자료", "회사·기관", "사람", "도구·기술", "수치", "기타"];
+const S = {status: null, jobs: [], job: null, jobKey: "", backend: localStorage.getItem("vr.backend") || "local", visual: "auto", purpose: "record", tab: {},
+           editing: null, openTr: new Set(), trCache: {}};
+
+async function api(path, opt = {}) {
+  const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opt, body: opt.body ? JSON.stringify(opt.body) : undefined});
+  let j = null; try { j = await r.json(); } catch (e) { j = null; }
+  if (!r.ok) throw new Error((j && j.message) || `서버 오류 ${r.status}`);
+  return j;
+}
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  document.body.append(t); setTimeout(() => t.remove(), 3200); }
+
+/* ---------- 넣기 ---------- */
+function renderBackends() {
+  const b = S.status?.backends || {};
+  $("#backend").innerHTML = ["local", "claude"].map(k => {
+    const st = b[k]; const locked = st && !st.ok;
+    return `<button type="button" data-b="${k}" aria-pressed="${S.backend === k}" class="${locked ? "locked" : ""}"
+      title="${esc(locked ? st.why : (st && !st.vision ? "화면 읽기 잠김 — " + st.visionWhy : ""))}">${locked ? icon("lock") : ""}${BACK[k]}</button>`;
+  }).join("");
+  const st = b[S.backend]; let note = "";
+  if (st && !st.ok) note = `<div class="note"><b>${BACK[S.backend]}가 꺼져 있습니다.</b> 이대로 넣으면 글만 받아 두고 멈춥니다 — 켠 뒤 "다시 시도".
+      <details><summary>${icon("chev")}켜는 법</summary><p>${esc(st.why)}</p></details></div>`;
+  else if (st && !st.vision && S.visual !== "never") note = `<div class="note"><b>화면 읽기 잠김</b> — 화면은 캡처해 붙이지만 내용은 읽지 않습니다.
+      <details><summary>${icon("chev")}이유</summary><p>${esc(st.visionWhy)}</p></details></div>`;
+  $("#lockNote").innerHTML = note;
+}
+$("#backend").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  S.backend = b.dataset.b; localStorage.setItem("vr.backend", S.backend); renderBackends(); });
+$("#visual").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.visual = b.dataset.v;
+  [...$("#visual").children].forEach(x => x.setAttribute("aria-pressed", x === b)); renderBackends(); });
+$("#purpose").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.purpose = b.dataset.p;
+  [...$("#purpose").children].forEach(x => x.setAttribute("aria-pressed", x === b)); });
+$("#focus").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); $("#feed").requestSubmit(); } });
+$("#ref").addEventListener("keydown", e => {
+  if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault(); if (e.isComposing || e.keyCode === 229) return; $("#feed").requestSubmit(); });
+$("#feed").addEventListener("submit", async e => {
+  e.preventDefault();
+  const refs = $("#ref").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const errBox = $("#feedErr"); errBox.innerHTML = "";
+  if (!refs.length) { errBox.innerHTML = `<div class="err">영상 주소나 파일 경로를 넣으세요.</div>`; $("#ref").focus(); return; }
+  $("#go").disabled = true; $("#go").textContent = "넣는 중…";
+  const bad = []; let last = null, existed = 0;
+  for (const ref of refs) {
+    try { const r = await api("/api/jobs", {method: "POST", body: {ref, backend: S.backend, visual: S.visual, lang: $("#lang").value.trim() || null, purpose: S.purpose, focus: $("#focus").value.trim(),
+      transcribe: $("#forceStt").checked ? "stt" : "auto", sttFresh: $("#sttFresh").checked}});
+      last = r.job.id; if (r.existed) existed++; }
+    catch (err) { bad.push(`${ref} — ${err.message}`); }
+  }
+  $("#go").disabled = false; $("#go").textContent = "정리하기";
+  if (bad.length) { errBox.innerHTML = `<div class="err">${bad.map(esc).join("<br>")}</div>`; $("#ref").value = bad.map(b => b.split(" — ")[0]).join("\n"); }
+  else $("#ref").value = "";
+  if (existed) toast(existed === 1 ? "같은 설정으로 이미 정리한 영상이라 그 결과를 엽니다" : `${existed}개는 이미 정리한 영상입니다`);
+  await loadJobs(); if (last) location.hash = `job=${last}`;
+});
+
+/* ---------- 바깥 상태 ---------- */
+async function loadStatus(fresh) {
+  try { S.status = await api("/api/status" + (fresh ? "?fresh=1" : "")); } catch (e) { S.status = null; }
+  if (!localStorage.getItem("vr.backend") && S.status && !S.status.backends[S.backend].ok) {   // 저장된 선택이 없으면 켜진 쪽으로
+    const on = ["local", "claude"].find(b => S.status.backends[b].ok); if (on) S.backend = on; }
+  renderBackends();
+  const st = S.status; if (!st) { $("#deps").innerHTML = `<div class="dep"><span class="dot"></span>서버에 닿지 않습니다</div>`; return; }
+  const row = (ok, name, why) => `<div class="dep"><span class="dot ${ok ? "ok" : ""}"></span>${name} ${ok ? "켜짐" : `꺼짐 <button type="button" data-why="${esc(why)}">켜는 법</button>`}</div>`;
+  const off = [[st.stt.ok, "stt (자막 없는 영상 받아 적기)", st.stt.why], [st.backends.local.ok, "로컬 LLM", st.backends.local.why],
+               [st.backends.claude.ok, "Claude Code", st.backends.claude.why]].filter(x => !x[0]);   // 켜진 것은 말하지 않는다 — 고르는 칸이 이미 보인다
+  $("#deps").innerHTML = off.length ? `<div class="deps-head"><span>꺼진 것</span><button type="button" id="recheck">다시 확인</button></div>` + off.map(x => row(...x)).join("") : "";
+}
+$("#deps").addEventListener("click", e => {
+  if (e.target.id === "recheck") return loadStatus(true);
+  const w = e.target.dataset?.why; if (w) toastLong(w);
+});
+function toastLong(msg) { const n = $("#feedErr"); n.innerHTML = `<div class="note">${esc(msg)}</div>`; }
+
+/* ---------- 목록 ---------- */
+function mini(j) {   // 칸 = 구간: 현상됨(화면을 읽음·붙임) / 어두운 칸(말만) / 점선(정리 전) — 콘셉트 데이터 매핑
+  const cells = j.sections?.cells || []; if (!cells.length) return "";
+  const first = cells.indexOf("wait");
+  return `<span class="mini" aria-hidden="true" title="칸 = 구간. 밝은 칸: 화면을 읽은 구간 / 흐린 칸: 화면을 붙였지만 읽지 않음 / 어두운 칸: 말만 / 점선: 정리 전">${cells.slice(0, 40).map((c, i) => `<i class="${c === "lit" ? "dev" : c === "unread" ? "dim" : c === "done" ? "" : (i === first && j.status === "running" ? "run" : "wait")}"></i>`).join("")}</span>`;
+}
+function jobLine(j) {
+  if (j.status === "done") { const c = j.sections.cells, lit = c.filter(x => x === "lit").length, dim = c.filter(x => x === "unread").length, talk = c.filter(x => x === "done").length;
+    return `${j.sections.total}구간` + (lit ? `<span class="key"><i class="sw dev"></i>화면 읽음 ${lit}</span>` : "") + (dim ? `<span class="key"><i class="sw dim"></i>읽지 않음 ${dim}</span>` : "")
+      + (talk ? `<span class="key"><i class="sw"></i>말만 ${talk}</span>` : ""); }
+  if (j.status === "failed") return `<span class="bad">${esc(failHead(j))}</span>`;
+  if (j.status === "running") return esc(j.stage || "정리 중");
+  return STATUS[j.status];
+}
+function renderJobs() {
+  const cur = curId();
+  $("#jobCount").textContent = S.jobs.length ? `${S.jobs.length}개` : "";
+  if (!S.jobs.length) { $("#jobs").innerHTML = `<p class="more" style="padding:0 4px">아직 없습니다. 위에 주소를 넣으면 여기에 쌓입니다.</p>`; return; }
+  $("#jobs").innerHTML = S.jobs.map(j => `<a class="job" href="#job=${j.id}" aria-current="${j.id === cur}">
+    <span class="jt">${esc(j.title || j.ref)}</span>
+    <span class="jm"><span class="num">${j.duration ? fmt(j.duration) : ""}</span><span>${jobLine(j)}</span>${j.origin === "a2a" ? `<span>${esc(j.caller || "다른 에이전트")}가 맡김</span>` : ""}</span>
+    ${mini(j)}</a>`).join("");
+}
+async function loadJobs() { try { S.jobs = (await api("/api/jobs")).jobs; } catch (e) { return; } renderJobs(); }
+
+/* ---------- 인화지 ---------- */
+const curId = () => (location.hash.match(/job=([\w-]+)/) || [])[1] || null;
+function fmtLen(sec) { sec = Math.round(sec); return sec >= 60 ? `${Math.floor(sec / 60)}분 ${sec % 60}초` : `${sec}초`; }
+function timeBtn(t, cls = "tc") { return `<button type="button" class="${cls} num" data-t="${t}" title="이 시각부터 재생">${icon("play")}${fmt(t)}</button>`; }
+
+function renderEmpty() {
+  $("#main").innerHTML = `<section class="empty"><div class="demo" aria-hidden="true"><div class="lit">화면을 읽은 구간</div><div>말만 있는 구간</div><div class="lit">화면을 읽은 구간</div></div>
+  <div><h1>영상을 넣으면 인화지 한 장으로 정리합니다</h1>
+  <p>왼쪽 띠의 칸 하나가 영상의 한 구간입니다. 칸 옆에 그 구간에서 말한 것을, 화면에만 있던 것(슬라이드·그래프·코드)은 그 칸에 실제 화면과 함께 적습니다.</p>
+  <ol><li>업로더가 올린 자막이 있으면 그 자막을 씁니다. 자동 자막은 쓰지 않습니다.</li>
+  <li>영상의 구성(올린 사람의 챕터, 질문·항목·단계)을 찾아 그 단위로 나눕니다. 못 찾으면 시간으로 자릅니다.</li>
+  <li>자막이 없으면 stt 에이전트가 이 PC에서 받아 적습니다 (화자·시각 포함).</li>
+  <li>말이 화면을 가리키는 구간만 그 시각의 화면을 봅니다.</li>
+  <li>틀린 곳은 구간마다 고치거나, 다른 쪽(로컬 LLM / Claude Code)으로 다시 만듭니다.</li></ol></div></section>`;
+}
+
+function band(j) {
+  if (j.status === "running" || j.status === "queued") {
+    return `<div class="band" role="status"><span class="spin" aria-hidden="true"></span><div class="grow">${esc(j.stage || STATUS[j.status])}
+      ${j.stt && j.stt.reviewUrl && !j.transcriptSource ? `<div class="why">받아 적는 과정은 <a href="${esc(j.stt.reviewUrl)}" target="_blank" rel="noopener">stt 화면</a>에서 볼 수 있습니다</div>` : ""}</div>
+      <button class="btn" data-act="cancel">${icon("stop")}취소</button></div>`;
+  }
+  if (j.status === "failed") {
+    const other = j.backend === "local" ? "claude" : "local";
+    const kept = j.transcriptSource ? `글은 받아 두었습니다 (${SUBS[j.transcriptSource]}${j.sections.some(s => s.status === "done") ? `, 정리한 구간 ${j.sections.filter(s => s.status === "done").length}개` : ""}) — 다시 시도하면 멈춘 곳부터 이어갑니다. ` : "";
+    return `<div class="band fail" role="alert"><div class="grow"><b>${esc(failHead(j))}</b><div class="why">${esc(kept)}${esc(j.error)}</div></div>
+      <button class="btn" data-act="retry">${icon("redo")}다시 시도</button>
+      <button class="btn" data-act="retry" data-b="${other}" ${S.status && !S.status.backends[other].ok ? "disabled" : ""}>${BACK[other]}로 이어서</button></div>`;
+  }
+  if (j.status === "canceled") return `<div class="band"><div class="grow">취소했습니다. 정리한 구간은 남아 있습니다.</div><button class="btn" data-act="retry">${icon("redo")}이어서 정리</button></div>`;
+  return "";
+}
+
+function frameCells(s, n0) {
+  if (s.status !== "done") return [`<figure class="frame"><div class="win wait">${s.status === "failed" ? "정리 실패" : "정리 전"}</div><figcaption><b class="num">${String(n0).padStart(2, "0")}</b><span class="num">${fmt(s.start)}</span></figcaption></figure>`];
+  if (!s.frames.length) return [`<figure class="frame"><div class="win">말만 있는 구간</div><figcaption><b class="num">${String(n0).padStart(2, "0")}</b><a href="#" data-t="${s.start}" class="num">${fmt(s.start)}</a></figcaption></figure>`];
+  return s.frames.map((f, i) => `<figure class="frame${f.read === false ? " unread" : ""}" data-at="${f.t}"><button type="button" data-pic="${esc(f.url)}" data-pt="${f.t}" data-why="${esc(f.why)}" aria-label="${fmt(f.t)} 화면 크게 보기${f.read === false ? " (읽지 않은 화면)" : ""}"><img src="${esc(f.url)}" alt="" loading="lazy"></button>
+    <figcaption><b class="num">${String(n0 + i).padStart(2, "0")}</b><a href="#" data-t="${f.t}" class="num">${fmt(f.t)}</a></figcaption></figure>`);
+}
+
+function sectionHTML(j, s, n0) {
+  const busy = j.status === "running" || j.status === "queued";
+  const cells = frameCells(s, n0);
+  let body;
+  if (S.editing && S.editing.idx === s.idx) body = editHTML(s);
+  else if (s.status !== "done") body = `<h3 class="t" style="color:var(--ink-3)">${s.status === "failed" ? "이 구간을 정리하지 못했습니다" : "정리 전"}</h3>
+      ${s.status === "failed" ? `<div class="serr">${esc(s.error || "")}</div>` : `<div class="skel" style="width:88%"></div><div class="skel" style="width:72%"></div><div class="skel" style="width:80%"></div>`}`;
+  else {
+    const unread = s.frames.filter(f => f.read === false).length;   // 읽었는데 더할 것 없음 ≠ 읽지 못함 (잠김)
+    const obs = s.observations.length ? `<div class="seen"><h3>화면에서 읽은 것</h3><ul>${s.observations.map(o => `<li><span>${esc(o.text)}</span>${timeBtn(o.t)}</li>`).join("")}</ul></div>`
+      : unread ? `<div class="lockline">${icon("lock")} 화면은 붙였지만 읽지 않았습니다 — ${esc(BACK[s.backend] || "")} 설정이 그림을 받지 않습니다</div>`
+      : s.frames.length ? `<div class="lockline">화면 ${s.frames.length}장을 봤지만 말에 더할 정보가 없었습니다</div>` : "";
+    body = `<h3 class="t">${esc(s.title)}</h3>${s.gist ? `<p class="gist">${esc(s.gist)}</p>` : ""}<ul class="pts">${s.points.map(p => `<li><span>${esc(p.text)}${(p.sub || []).length ? `<ul class="sub">${p.sub.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</span>${timeBtn(p.t)}</li>`).join("")}</ul>${obs}`;
+  }
+  const tr = S.openTr.has(s.idx) ? trHTML(s.idx) : "";
+  const actions = s.status === "done" && !(S.editing && S.editing.idx === s.idx) ? `<span class="acts">
+      <button class="btn quiet" data-act="edit" data-i="${s.idx}" ${busy ? "disabled" : ""}>${icon("edit")}고치기</button>
+      <button class="btn quiet" data-act="regen" data-i="${s.idx}" ${busy ? "disabled" : ""} aria-haspopup="menu">${icon("redo")}다시 만들기${icon("chev")}</button>
+      <button class="btn quiet" data-act="tr" data-i="${s.idx}" aria-expanded="${S.openTr.has(s.idx)}">${icon("text")}받아 적은 글</button></span>` : "";
+  return `<section class="cut ${s.edited ? "edited" : ""}" id="cut-${s.idx}" aria-labelledby="ct-${s.idx}">
+    <div class="strip"><div class="film">${cells.join("")}</div>
+      <div class="slate num"><b>구간 ${s.idx + 1}</b><span>${fmtLen(s.end - s.start)}</span>${s.status === "done" && s.frames.length ? `<span>화면 ${s.frames.length}장</span>` : ""}</div></div>
+    <div class="notes"><header><span id="ct-${s.idx}" class="sr">구간 ${s.idx + 1}</span>${timeBtn(s.start)}<span class="num range-end">~ ${fmt(s.end)}</span>
+      ${s.edited ? `<span class="mark">고침</span>` : ""}${s.status === "done" && s.backend && s.backend !== j.backend ? `<span class="by">${BACK[s.backend]}로 다시 만듦</span>` : ""}${actions}</header>
+      ${body}${tr}</div></section>`;
+}
+
+function editHTML(s) {
+  const e = S.editing;
+  return `<form class="edit" data-edit="${s.idx}">
+    <label class="sr" for="et">구간 제목</label><input class="title" id="et" value="${esc(e.title)}">
+    <label class="sr" for="eg">구간 결론</label><textarea id="eg" class="egist" rows="2" placeholder="이 구간의 결론 한두 문장">${esc(e.gist || "")}</textarea>
+    ${e.points.map((p, k) => `<div class="erow"><input aria-label="요점 ${k + 1} 시각" value="${fmt(p.t)}" data-k="${k}" data-f="t" class="num">
+      <textarea aria-label="항목 ${k + 1} — 첫 줄은 항목, 다음 줄은 딸린 이유·사례" data-k="${k}" data-f="text" rows="${2 + (p.sub || []).length}">${esc([p.text, ...(p.sub || []).map(x => "- " + x)].join("\n"))}</textarea>
+      <button type="button" class="btn quiet icon" data-act="pdel" data-k="${k}">${icon("trash", "요점 " + (k + 1) + " 지우기")}</button></div>`).join("")}
+    <div class="ebar"><button type="button" class="btn" data-act="padd">${icon("plus")}요점 더하기</button>
+      <span class="hint">Ctrl+Enter 로 저장</span>
+      <button type="button" class="btn" data-act="ecancel">취소</button><button type="submit" class="btn primary">저장</button></div></form>`;
+}
+
+function trHTML(idx) {
+  const segs = S.trCache[`${S.job.id}:${idx}`];
+  if (!segs) return `<div class="tr"><div class="skel" style="width:60%"></div></div>`;
+  const names = S.job.transcript.speakers || {};
+  return `<div class="tr"><h3>받아 적은 글 <span class="num" style="font-weight:400;color:var(--ink-3)">${segs.length}줄 · ${SUBS[S.job.transcriptSource] || ""}</span></h3>
+    <ol>${segs.map(g => `<li>${timeBtn(g.start)}<span class="who">${g.speaker ? esc(names[g.speaker] || g.speaker) : ""}</span><span>${esc(g.text)}</span></li>`).join("")}</ol></div>`;
+}
+
+const lineOf = x => typeof x === "string" ? x : x.text;    // 예전 결과는 글자만, 지금은 {text, from}
+function citeOf(j, x) {   // 정리 문장이 기대는 정보 층 구간 — 누르면 그 구간으로
+  const frm = (typeof x === "object" && x.from) || []; if (!frm.length) return "";
+  return `<span class="cite">${frm.filter(i => j.sections[i]).map(i => `<button type="button" data-jump="${i}" title="${esc(j.sections[i].title)}">${fmt(j.sections[i].start)}</button>`).join("")}</span>`;
+}
+function tabOf(j) { return S.tab[j.id] || (j.overview ? "summary" : "info"); }   // 정리가 생기기 전에는 정보(진행)부터
+function tabsHTML(j) {
+  const t = tabOf(j), done = j.sections.filter(s => s.status === "done").length;
+  const tab = (k, label, meta) => `<button role="tab" id="tab-${k}" aria-selected="${t === k}" data-tab="${k}">${label}<span class="num">${meta}</span></button>`;
+  return `<div class="tabs" role="tablist" aria-label="보기">${tab("summary", "정리", j.overview ? "읽히게" : "아직")}${tab("info", "정보", `빠짐없이 · ${done}/${j.sections.length}구간`)}</div>`;
+}
+function answersHTML(j) {
+  const as = (j.overview || {}).answers || []; if (!as.length) return "";
+  return `<section class="answers"><h2>구간별 한 줄</h2><ol>${as.map(a => { const s = j.sections[a.idx]; if (!s) return "";
+    return `<li>${timeBtn(s.start)}<div><button type="button" class="jump" data-jump="${a.idx}">${esc(s.title)}</button><p>${esc(a.line)}</p></div></li>`; }).join("")}</ol></section>`;
+}
+function mentionsHTML(j) {
+  const ms = j.mentions || []; const cov = j.coverage || {checked: 0, missing: []};
+  if (!ms.length && !cov.checked) return "";
+  const groups = KINDS.map(k => [k, ms.filter(m => m.kind === k)]).filter(([, g]) => g.length);
+  const miss = cov.missing || [];
+  return `<section class="mentions"><header><h2>언급된 것</h2><span class="cov">${cov.checked ? (miss.length
+      ? `원문의 숫자·이름 ${cov.checked}개 중 ${miss.length}개가 정보에 없습니다: ${esc(miss.slice(0, 8).join(", "))}${miss.length > 8 ? " …" : ""}`
+      : `원문의 숫자·이름 ${cov.checked}개가 모두 정보에 있습니다`) : "원문에 확인할 숫자·이름이 없습니다"}</span></header>
+    <dl>${groups.map(([k, g]) => `<div><dt>${k}</dt><dd>${g.map(m => `<span class="mn${m.check ? " check" : ""}"><span>${esc(m.name)}${m.check ? `<em title="소리 인식으로 받아 적은 이름인데 영상 제목·설명·화면에 같은 표기가 없습니다. 소리를 들어 확인하세요.">받아 적기 확인 필요</em>` : ""}${m.note ? `<small>${esc(m.note)}</small>` : ""}</span>${timeBtn(m.t, "tc mini-tc")}</span>`).join("")}</dd></div>`).join("")}</dl></section>`;
+}
+function renderJob() { renderJobBody(); }
+function renderJobBody() {
+  const j = S.job; if (!j) return;
+  const src = j.source || {};
+  const facts = [
+    j.duration ? ["길이", `<span class="num">${fmt(j.duration)}</span>`] : null,
+    j.transcriptSource ? ["글", esc(SUBS[j.transcriptSource]) + (j.transcript.lang ? ` (${esc(LANGS[j.transcript.lang] || j.transcript.lang)})` : "")] : null,
+    j.structureLabel ? ["구성", esc(j.structureLabel) + ((j.structure || {}).source === "chapters" ? " (올린 사람 챕터)" : "")] : null,
+    ["쓰임새", esc(PURPOSE[j.purpose] || "기록·판단") + (j.focus ? ` — 중점: ${esc(j.focus)}` : "")],
+    ["정리한 쪽", (() => { const used = [...new Set(j.sections.filter(s => s.status === "done" && s.backend).map(s => s.backend))];   // 구간마다 실제로 정리한 쪽
+      return used.length > 1 ? used.map(b => `${BACK[b]} ${j.sections.filter(s => s.backend === b).length}구간`).join(", ") : BACK[used[0] || j.backend]; })()],
+    j.sections.length ? ["구간", `<span class="num">${j.sections.filter(s => s.status === "done").length}/${j.sections.length}</span>`] : null,
+    j.costUsd ? ["비용", `<span class="num">$${j.costUsd.toFixed(3)}</span>`] : null,
+    j.origin === "a2a" ? ["맡긴 에이전트", esc(j.caller || "이름 없음")] : null,
+  ].filter(Boolean);
+  const openHref = src.webpage_url || (j.kind !== "file" ? j.ref : "");
+  let n = 1; const cuts = j.sections.map(s => { const h = sectionHTML(j, s, n); n += Math.max(1, s.status === "done" ? s.frames.length : 1); return h; }).join("");
+  const tldr = j.overview && (j.overview.tldr || []).length ? `<div class="tldr"><h2>세 줄 결론</h2><ol>${j.overview.tldr.map(x => `<li><span>${esc(lineOf(x))}${citeOf(j, x)}</span></li>`).join("")}</ol></div>` : "";
+  const art = j.article ? `<section class="article" aria-labelledby="art-h"><header><h2 id="art-h">공유 글</h2>
+      <button class="btn" data-act="copyart">${icon("text")}글 복사</button></header>
+      <h3>${esc(j.article.title)}</h3><div class="art-body">${esc(j.article.body)}</div>
+      <p class="art-src">출처: ${esc(j.title)} — ${esc((j.source || {}).webpage_url || j.ref)}</p></section>` : "";
+  const ov = j.overview ? `<div><h2>개요<button class="btn quiet" data-act="regenov" ${j.status === "running" || j.status === "queued" ? "disabled" : ""} aria-haspopup="menu">${icon("redo")}다시 만들기${icon("chev")}</button></h2><p>${esc(j.overview.summary)}</p></div>
+      <div><h2>가져갈 것</h2><ul>${j.overview.takeaways.map(x => `<li>${esc(lineOf(x))}${citeOf(j, x)}</li>`).join("")}</ul></div>`
+    : `<div><h2>개요</h2><p class="wait">${j.status === "done" ? "개요가 없습니다." : "모든 구간을 정리하면 영상 전체 개요를 씁니다."}</p></div><div></div>`;
+  $("#main").innerHTML = `<article class="sheet" aria-labelledby="h1">
+    <header class="label"><h1 id="h1" tabindex="-1">${esc(j.title || j.ref)}</h1>
+      <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      <div class="tools">${openHref ? `<a class="btn" href="${esc(openHref)}" target="_blank" rel="noopener">${icon("ext")}<span class="lbl">원본</span></a>` : (j.kind === "file" ? `<button class="btn" data-t="0">${icon("ext")}재생</button>` : "")}
+        <a class="btn ${j.sections.some(s => s.status === "done") ? "" : "dis"}" href="/api/jobs/${j.id}/summary.md" ${j.source ? "" : 'aria-disabled="true" onclick="return false"'}>${icon("down")}<span class="lbl">마크다운</span></a>
+        <button class="btn icon" data-act="more" aria-haspopup="menu">${icon("more", "더 보기")}</button></div></header>
+    ${band(j)}
+    ${j.warnings.length ? `<div class="warns">${j.warnings.map(w => `<div>${esc(w)}</div>`).join("")}</div>` : ""}
+    ${tabsHTML(j)}
+    <div class="panel" ${tabOf(j) === "summary" ? "" : "hidden"} role="tabpanel" aria-labelledby="tab-summary">
+      ${tldr}
+      ${j.sections.length || j.overview ? `<div class="over">${ov}</div>` : ""}
+      ${answersHTML(j)}
+      ${art}
+    </div>
+    <div class="panel" ${tabOf(j) === "info" ? "" : "hidden"} role="tabpanel" aria-labelledby="tab-info">
+      ${mentionsHTML(j)}
+      ${cuts}
+    ${!j.sections.length && (j.status === "running" || j.status === "queued") ? `<section class="cut"><div class="strip"><div class="film"><figure class="frame"><div class="win wait">글 확보 중</div></figure><figure class="frame"><div class="win wait"></div></figure></div></div><div class="notes"><div class="skel" style="width:70%;margin-top:20px"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:60%"></div></div></section>` : ""}
+    </div>
+  </article>`;
+}
+
+
+async function loadJob(focus) {
+  const id = curId();
+  if (!id) { S.job = null; S.jobKey = ""; renderEmpty(); renderJobs(); return; }
+  let j; try { j = await api(`/api/jobs/${id}`); } catch (e) {
+    $("#main").innerHTML = `<section class="empty"><div></div><div><h1>작업을 찾을 수 없습니다</h1><p>${esc(e.message)} — 지운 작업일 수 있습니다.</p></div></section>`; return; }
+  const key = JSON.stringify(j);
+  if (S.job && S.job.id !== j.id) { S.editing = null; S.openTr = new Set(); }
+  S.job = j;
+  if (key === S.jobKey && !focus) return;
+  if (S.editing) { S.jobKey = ""; return; }   // 고치는 중에는 다시 그리지 않는다 (입력이 사라지지 않게)
+  S.jobKey = key; renderJob(); renderJobs();
+  if (focus) { $("#h1")?.focus({preventScroll: true}); window.scrollTo(0, 0); }
+}
+
+/* ---------- 동작 ---------- */
+let menuEl = null;
+function closeMenu() { menuEl?.remove(); menuEl = null; }
+function openMenu(btn, items) {
+  closeMenu(); const m = document.createElement("div"); m.className = "menu"; m.setAttribute("role", "menu");
+  m.innerHTML = items.map((it, k) => it === "-" ? "<hr>" : `<button role="menuitem" data-k="${k}" ${it.disabled ? "disabled" : ""}>${it.icon ? icon(it.icon) : ""}<span>${esc(it.label)}${it.note ? `<small>${esc(it.note)}</small>` : ""}</span></button>`).join("");
+  document.body.append(m); const r = btn.getBoundingClientRect();
+  m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + "px"; m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + "px";
+  m.addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (!b || b.disabled) return; closeMenu(); items[+b.dataset.k].run(); btn.focus(); });
+  m.addEventListener("keydown", e => { const bs = [...m.querySelectorAll("button:not([disabled])")]; const i = bs.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); bs[(i + 1) % bs.length]?.focus(); } if (e.key === "ArrowUp") { e.preventDefault(); bs[(i - 1 + bs.length) % bs.length]?.focus(); }
+    if (e.key === "Escape") { closeMenu(); btn.focus(); } });
+  menuEl = m; m.querySelector("button:not([disabled])")?.focus();
+}
+document.addEventListener("click", e => { if (menuEl && !menuEl.contains(e.target) && !e.target.closest("[aria-haspopup]")) closeMenu(); });
+
+function backendItems(run) {
+  return ["local", "claude"].map(b => { const st = S.status?.backends[b];
+    return {label: BACK[b], note: st && !st.ok ? "꺼져 있음 — 왼쪽 아래 '켜는 법'" : (st && !st.vision ? "화면은 읽지 못함" : ""), disabled: st && !st.ok, icon: st && !st.ok ? "lock" : null, run: () => run(b)}; });
+}
+async function act(fn, ok) { try { S.job = await fn(); S.jobKey = ""; renderJob(); loadJobs(); if (ok) toast(ok); } catch (e) { toast(e.message); } }
+
+$("#main").addEventListener("click", async e => {
+  const tb = e.target.closest("[data-tab]");
+  if (tb) { S.tab[S.job.id] = tb.dataset.tab; S.jobKey = ""; renderJob(); $(`#tab-${tb.dataset.tab}`)?.focus(); return; }
+  const jp = e.target.closest("[data-jump]");
+  if (jp) { S.tab[S.job.id] = "info"; S.jobKey = ""; renderJob(); const c = $(`#cut-${jp.dataset.jump}`); c?.scrollIntoView({block: "start"}); c?.querySelector(".tc")?.focus({preventScroll: true}); return; }
+  const t = e.target.closest("[data-t]");
+  if (t && !t.closest("form")) { e.preventDefault(); return openViewer(+t.dataset.t); }
+  const pic = e.target.closest("[data-pic]");
+  if (pic) { const d = $("#pic"); d.querySelector("img").src = pic.dataset.pic; d.querySelector("p").innerHTML = `<b class="num">${fmt(pic.dataset.pt)}</b>${esc(pic.dataset.why)}`; d.showModal(); return; }
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const j = S.job, i = +b.dataset.i;
+  switch (b.dataset.act) {
+    case "copyart": { const t = `${j.article.title}\n\n${j.article.body}\n\n출처: ${j.title} — ${(j.source || {}).webpage_url || j.ref}`;
+      try { await navigator.clipboard.writeText(t); toast("공유 글을 복사했습니다"); } catch (er) { toast("복사하지 못했습니다 — 글을 직접 선택해 복사하세요"); } return; }
+    case "cancel": return act(() => api(`/api/jobs/${j.id}/cancel`, {method: "POST"}), "취소를 요청했습니다");
+    case "retry": return act(() => api(`/api/jobs/${j.id}/retry`, {method: "POST", body: b.dataset.b ? {backend: b.dataset.b} : {}}));
+    case "regen": return openMenu(b, backendItems(bk => act(() => api(`/api/jobs/${j.id}/sections/${i}/regenerate`, {method: "POST", body: {backend: bk}}), `구간 ${i + 1}을 ${BACK[bk]}로 다시 만듭니다`)));
+    case "regenov": return openMenu(b, backendItems(bk => act(() => api(`/api/jobs/${j.id}/overview/regenerate`, {method: "POST", body: {backend: bk}}), `개요를 ${BACK[bk]}로 다시 씁니다`)));
+    case "more": {
+      const busy = j.status === "running" || j.status === "queued";
+      return openMenu(b, [
+        ...(j.stt && j.stt.reviewUrl ? [{label: "받아 적은 글 고치기", note: "stt 화면에서 소리를 들으며 고칩니다 (새 탭)", icon: "text",
+          run: () => window.open(j.stt.reviewUrl, "_blank", "noopener")}, "-"] : []),
+        {label: "다른 쓰임새로 다시 쓰기", note: "세 줄 결론·개요·공유 글만 다시 — 받아 적기·구간 정리는 그대로", disabled: busy, icon: "redo",
+         run: () => setTimeout(() => openMenu(b, Object.keys(PURPOSE).map(k => ({label: PURPOSE[k], disabled: k === j.purpose,
+           note: k === j.purpose ? "지금 쓰임새" : "", run: () => act(() => api(`/api/jobs/${j.id}/rewrite`, {method: "POST", body: {purpose: k}}), `${PURPOSE[k]}로 다시 씁니다`)}))), 0)},
+        {label: "같은 영상 새로 정리", note: "지금 설정(" + BACK[S.backend] + ")으로 처음부터", disabled: busy, icon: "redo",
+         run: () => api("/api/jobs", {method: "POST", body: {ref: j.ref, backend: S.backend, visual: S.visual, lang: j.lang, force: true}}).then(r => { location.hash = "job=" + r.job.id; loadJobs(); }).catch(er => toast(er.message))},
+        "-",
+        {label: "이 작업 지우기", note: "정리·캡처를 지웁니다. stt 쪽 받아 적은 글은 남습니다", disabled: busy, icon: "trash",
+         run: async () => { if (!confirm("이 작업을 지울까요? 되돌릴 수 없습니다.")) return;
+           try { await api(`/api/jobs/${j.id}`, {method: "DELETE"}); location.hash = ""; await loadJobs(); toast("지웠습니다"); } catch (er) { toast(er.message); } }}]);
+    }
+    case "tr": {
+      if (S.openTr.has(i)) S.openTr.delete(i); else { S.openTr.add(i);
+        if (!S.trCache[`${j.id}:${i}`]) api(`/api/jobs/${j.id}/transcript?section=${i}`).then(r => { S.trCache[`${j.id}:${i}`] = r.segments; S.jobKey = ""; renderJob(); }); }
+      S.jobKey = ""; renderJob(); return;
+    }
+    case "edit": { const s = j.sections[i]; S.editing = {idx: i, title: s.title, gist: s.gist || "", points: s.points.map(p => ({...p}))}; renderJob(); $("#et")?.focus(); return; }
+    case "ecancel": S.editing = null; S.jobKey = ""; renderJob(); $(`#cut-${i}`)?.scrollIntoView({block: "nearest"}); return;
+    case "padd": syncEdit(); S.editing.points.push({t: S.editing.points.at(-1)?.t ?? j.sections[S.editing.idx].start, text: ""}); renderJob(); $(`.edit textarea[data-k="${S.editing.points.length - 1}"]`)?.focus(); return;
+    case "pdel": syncEdit(); S.editing.points.splice(+b.dataset.k, 1); renderJob(); return;
+  }
+});
+function syncEdit() {
+  const f = $(".edit"); if (!f || !S.editing) return;
+  S.editing.title = $("#et").value; S.editing.gist = $("#eg").value;
+  f.querySelectorAll("[data-f]").forEach(el => { const p = S.editing.points[+el.dataset.k]; if (!p) return;
+    if (el.dataset.f === "t") { const v = parseT(el.value); if (v !== null) p.t = v; }
+    else { const ls = el.value.split("\n").map(x => x.trim()).filter(Boolean); p.text = ls[0] || ""; p.sub = ls.slice(1).map(x => x.replace(/^[-•·]\s*/, "")); } });
+}
+$("#main").addEventListener("submit", async e => {
+  const f = e.target.closest(".edit"); if (!f) return; e.preventDefault(); syncEdit();
+  const idx = +f.dataset.edit, ed = S.editing;
+  try { const d = await api(`/api/jobs/${S.job.id}/sections/${idx}`, {method: "PATCH", body: {title: ed.title, gist: ed.gist, points: ed.points.filter(p => p.text.trim())}});
+    S.editing = null; S.job = d; S.jobKey = ""; renderJob(); toast("고친 내용을 저장했습니다 — A2A 결과·마크다운에도 반영됩니다"); $(`#cut-${idx}`)?.scrollIntoView({block: "nearest"}); }
+  catch (er) { toast(er.message); }
+});
+$("#main").addEventListener("keydown", e => {
+  const tb = e.target.closest?.("[role=tab]");
+  if (tb && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { e.preventDefault(); const k = tb.dataset.tab === "summary" ? "info" : "summary";
+    S.tab[S.job.id] = k; S.jobKey = ""; renderJob(); $(`#tab-${k}`)?.focus(); return; } if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest(".edit")) { e.preventDefault(); e.target.closest(".edit").requestSubmit(); }
+  if (e.key === "Escape" && e.target.closest(".edit")) { S.editing = null; S.jobKey = ""; renderJob(); } });
+$("#pic").addEventListener("click", e => { if (e.target.id === "pic" || e.target.tagName === "IMG") $("#pic").close(); });
+
+/* ---------- 원본 뷰어 ---------- */
+function openViewer(t) {
+  const j = S.job; if (!j) return; const src = j.source || {};
+  let media;
+  if (j.kind === "youtube" && src.video_id) media = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(src.video_id)}?start=${Math.floor(t)}&autoplay=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="원본 영상"></iframe>`;
+  else if (j.kind === "file") media = `<video src="/api/jobs/${j.id}/media#t=${t}" controls autoplay></video>`;
+  else { window.open(src.webpage_url || j.ref, "_blank", "noopener"); toast(`이 사이트는 시각으로 바로 열 수 없어 ${fmt(t)}을 직접 찾아야 합니다`); return; }
+  $("#viewer").innerHTML = `<div class="viewer" role="dialog" aria-label="원본 영상"><header><span class="grow">${esc(j.title)}</span><span class="at num">${fmt(t)}</span>
+    <button type="button" id="vclose" aria-label="닫기">${icon("x")}</button></header>${media}</div>`;
+  $("#vclose").onclick = () => { $("#viewer").innerHTML = ""; };
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#viewer").innerHTML && !menuEl && !$("#pic").open) $("#viewer").innerHTML = ""; });
+
+/* ---------- 흐름 ---------- */
+window.addEventListener("hashchange", () => { closeMenu(); document.body.classList.toggle("has-job", !!curId()); loadJob(true); });
+document.body.classList.toggle("has-job", !!curId());
+let idle = 0;
+async function tick() {   // 진행 중이면 1.5초마다, 아니어도 5초마다 목록을 받는다 (A2A 로 새로 들어온 일이 보이게)
+  const active = S.jobs.some(j => j.status === "running" || j.status === "queued");
+  if (active || ++idle % 3 === 0) await loadJobs();
+  if (S.job && (S.job.status === "running" || S.job.status === "queued" || active)) await loadJob(false);
+}
+(async () => { await loadStatus(); await loadJobs(); await loadJob(true); setInterval(tick, 1500); setInterval(() => loadStatus(), 15000); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>video_reader 시안 A</title>
+<style>
+@font-face{font-family:P;src:url(../../../../video_reader/static/fonts/Pretendard-Regular.ttf);font-weight:400}
+@font-face{font-family:P;src:url(../../../../video_reader/static/fonts/Pretendard-Medium.ttf);font-weight:500}
+@font-face{font-family:P;src:url(../../../../video_reader/static/fonts/Pretendard-SemiBold.ttf);font-weight:600}
+:root{--table:#E2E4E7;--sheet:#FFFFFF;--film:#1A1B1E;--film2:#2A2C31;--edge:#E9A23B;--ink:#16181C;--ink2:#4A4F57;--ink3:#737985;--line:#E6E8EB;--time:#8A5300;--pencil:#D2322D;}
+*{box-sizing:border-box} body{margin:0;background:var(--table);font:15px/1.5 P,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+.app{display:grid;grid-template-columns:316px 1fr;min-height:100vh}
+aside{padding:20px 16px 20px 20px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px} .brand i{width:18px;height:22px;background:var(--film);border-radius:2px;box-shadow:inset 3px 0 0 -1px var(--film),inset 0 0 0 4px var(--film);position:relative}
+.brand i:after{content:"";position:absolute;inset:5px 4px;background:var(--edge);border-radius:1px}
+.feed{background:var(--sheet);border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(20,22,26,.08)}
+.feed textarea{width:100%;border:1px solid #CDD1D6;border-radius:6px;padding:9px 10px;font:14px/1.4 P;resize:none;height:62px}
+.opts{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap} .seg{display:inline-flex;border:1px solid #CDD1D6;border-radius:6px;overflow:hidden;font-size:13px}
+.seg span{padding:5px 9px} .seg .on{background:var(--ink);color:#fff} .seg .lock{color:var(--ink3)}
+.go{width:100%;background:var(--ink);color:#fff;border:0;border-radius:6px;padding:9px;font:600 14px P}
+.lab{font-size:13px;color:var(--ink3);margin:2px 2px -8px}
+.job{display:block;text-decoration:none;color:inherit;padding:10px 10px 11px;border-radius:8px} .job:hover{background:rgba(255,255,255,.5)}
+.job.on{background:var(--sheet);box-shadow:0 1px 3px rgba(20,22,26,.08)}
+.jt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:500;font-size:14px;line-height:1.4}
+.jm{display:flex;gap:10px;font-size:12.5px;color:var(--ink3);margin-top:3px;font-variant-numeric:tabular-nums} .fail .st{color:var(--ink)} .from{color:var(--ink2)}
+.mini{display:flex;gap:2px;margin-top:7px;background:var(--film);padding:3px;border-radius:2px;width:max-content}
+.mini i{width:13px;height:8px;border-radius:1px;background:#3B3E45} .mini .dev{background:#B9BDC4} .mini .wait{background:transparent;outline:1px dashed #555A62;outline-offset:-1px}
+main{padding:20px 28px 60px 8px}
+.sheet{background:var(--sheet);max-width:1060px;border-radius:4px;box-shadow:0 1px 2px rgba(20,22,26,.06),0 8px 24px rgba(20,22,26,.07)}
+.label{padding:26px 36px 22px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:8px 24px}
+h1{margin:0;font-size:22px;line-height:1.35;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+dl{grid-column:1;display:flex;gap:22px;margin:6px 0 0;font-size:13px} dt{color:var(--ink3)} dd{margin:0 0 0 6px;font-variant-numeric:tabular-nums} dl div{display:flex}
+.top{grid-row:1/3;grid-column:2;display:flex;gap:8px;align-items:flex-start}
+.top button,.acts button{font:500 13px P;border:1px solid #CDD1D6;background:#fff;border-radius:6px;padding:6px 10px;color:var(--ink)}
+.over{padding:22px 36px 26px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 320px;gap:32px}
+.over p{margin:0;font-size:16px;line-height:1.8;max-width:62ch} .over h3,.seen h3{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--ink2)}
+.over ul{margin:0;padding-left:18px;font-size:14px;line-height:1.6} .over li{margin-bottom:6px}
+.cut{display:grid;grid-template-columns:232px 1fr;border-bottom:1px solid var(--line)}
+.strip{background:var(--film);padding:14px 22px;position:relative;
+  background-image:radial-gradient(circle at 50% 50%,#E2E4E7 0 0) ,linear-gradient(var(--film),var(--film));}
+.strip:before,.strip:after{content:"";position:absolute;top:0;bottom:0;width:8px;background:repeating-linear-gradient(to bottom,transparent 0 6px,#5A5E66 6px 11px,transparent 11px 16px)}
+.strip:before{left:7px} .strip:after{right:7px}
+.frame{margin:0 0 14px} .frame img,.frame .win{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:1px}
+.frame .win{background:var(--film2);color:#8D929B;font-size:12px;display:grid;place-items:center}
+.frame figcaption{display:flex;justify-content:space-between;color:var(--edge);font-size:11.5px;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.frame b{font-weight:600}
+.edited .strip figure:first-child figcaption b{outline:2px solid var(--pencil);outline-offset:2px;border-radius:50%;padding:0 3px;color:#fff}
+.notes{padding:18px 36px 22px 28px}
+.notes header{display:flex;align-items:center;gap:10px;font-size:13px} .range{color:var(--time);font-variant-numeric:tabular-nums;font-weight:500;text-decoration:none}
+.mark{color:var(--pencil);font-weight:600} .acts{margin-left:auto;display:flex;gap:6px} .acts button{padding:4px 8px;font-size:12.5px;color:var(--ink2)}
+h2{margin:6px 0 10px;font-size:18px;font-weight:600;line-height:1.4}
+.pts{margin:0;padding:0;list-style:none} .pts li{display:grid;grid-template-columns:1fr auto;gap:16px;padding:6px 0;line-height:1.7;font-size:15px}
+.tc{color:var(--time);text-decoration:none;font-size:13px;font-variant-numeric:tabular-nums;padding-top:2px}
+.seen{margin-top:12px;padding:12px 14px;background:#F4F5F7;border-radius:6px} .seen ul{margin:0;padding:0;list-style:none}
+.seen li{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:14px;line-height:1.65;padding:3px 0}
+</style>
+<div class="app"><aside>
+<div class="brand"><i></i>video_reader</div>
+<div class="feed"><textarea>https://www.youtube.com/watch?v=…</textarea>
+<div class="opts"><span class="seg"><span>로컬 LLM</span><span class="on">Claude Code</span></span><span class="seg"><span class="on">화면 자동</span><span>항상</span><span>안 봄</span></span></div>
+<button class="go">정리하기</button></div>
+<div class="lab">정리한 영상</div>
+<a class="job on done" href="#">
+  <span class="jt">Inside the Mind of a Master Procrastinator | Tim Urban | TED</span>
+  <span class="jm"><span class="len">14:04</span><span class="st">3구간</span></span>
+  <span class="mini"><i class="dev"></i><i class="dev"></i><i class="dev"></i></span>
+</a>
+<a class="job stt" href="#">
+  <span class="jt">2026 반도체 업황 점검 — 3분기 실적 발표 컨퍼런스콜</span>
+  <span class="jm"><span class="len">58:12</span><span class="st">stt 받아 적는 중</span></span>
+  
+</a>
+<a class="job run" href="#">
+  <span class="jt">Attention Is All You Need 논문 리뷰 (코드로 따라가기)</span>
+  <span class="jm"><span class="len">41:30</span><span class="st">정리 중 5/14</span><span class="from">A2A · paper_analyst</span></span>
+  <span class="mini"><i class="dev"></i><i class="unexp"></i><i class="dev"></i><i class="dev"></i><i class="unexp"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i><i class="wait"></i></span>
+</a>
+<a class="job fail" href="#">
+  <span class="jt">/mnt/d/videos/team-meeting-1121.mp4</span>
+  <span class="jm"><span class="len">32:05</span><span class="st">멈춤 — stt 서버 꺼짐</span></span>
+  
+</a>
+</aside><main><article class="sheet">
+<div class="label"><h1>Inside the Mind of a Master Procrastinator | Tim Urban | TED</h1><dl><div><dt>길이</dt><dd>14:04</dd></div><div><dt>글</dt><dd>업로더 자막 (en)</dd></div><div><dt>정리</dt><dd>Claude Code</dd></div><div><dt>구간</dt><dd>3</dd></div></dl>
+<div class="top"><button>원본 열기</button><button>마크다운</button><button>⋯</button></div></div>
+<div class="over"><div><h3>개요</h3><p>Tim Urban은 1년 동안 써야 했던 90쪽짜리 졸업논문을 마감 사흘 전까지 한 단어도 쓰지 못하다가 72시간 만에 몰아서 낸 경험으로 이야기를 시작한다. 그는 미루는 사람의 머릿속을 세 캐릭터로 설명한다. 장기 계획을 세우는 &#x27;이성적 결정자&#x27;, 지금 쉽고 재미있는 것만 좇는 &#x27;즉각적 만족 원숭이&#x27;, 그리고 마감이나 망신이 닥쳤을 때만 깨어나 원숭이를 쫓아내는 &#x27;패닉 몬스터&#x27;다. 마감이 있는 일이라면 이 시스템은 보기 좋지 않아도 결국 굴러가고, 피해도 짧은 기간에 그친다. 문제는 창작이나 창업, 가족, 건강, 인간관계처럼 마감이 없는 일이다. 이런 일에서는 패닉 몬스터가 깨어나지 않아 미루기가 끝없이 이어지고, 조용한 불행과 후회가 쌓인다. 블로그 글을 보고 수천 명이 보낸 절박한 이메일이 그 근거다. 그는 미루지 않는 사람은 없다고 결론짓고, 90년 인생을 한 주에 한 칸씩 그린 &#x27;인생 달력&#x27;을 보여 주며 남은 시간이 생각보다 적으니 무엇을 미루고 있는지 돌아보라고 권한다.</p></div><div><h3>가져갈 것</h3><ul><li>미루는 사람의 머릿속에서는 장기 계획을 세우는 이성적 결정자와 지금의 즐거움만 좇는 즉각적 만족 원숭이가 충돌하고, 대개 원숭이가 이긴다.</li><li>놀면 안 될 때 노는 &#x27;어두운 놀이터&#x27;의 재미는 즐겁지 않고 죄책감, 불안, 자기혐오만 남긴다.</li><li>마감이 있는 일에서는 패닉 몬스터가 깨어나 결국 일을 해내게 만들기 때문에 피해가 단기간에 그친다.</li><li>더 위험한 것은 창작, 창업, 건강, 가족, 연애처럼 마감이 없는 일의 미루기다. 패닉 몬스터가 나타나지 않으니 피해가 끝없이 이어진다.</li><li>장기 미루기의 고통은 벼락치기가 아니라 자기 삶의 구경꾼이 된 느낌, 꿈을 쫓기 시작조차 못 했다는 답답함에서 온다.</li><li>모두가 미루는 사람이다. 마감을 잘 지키는 사람이라도 마감 없는 영역에서는 원숭이에게 당할 수 있다.</li><li>한 주를 한 칸으로 그린 인생 달력을 떠올리며, 자신이 무엇을 미루고 있는지 점검하고 오늘 시작해야 한다.</li></ul></div></div>
+<section class="cut">
+  <div class="strip"><figure class="frame"><img src="frames/f000210.jpg" alt=""><figcaption><b>01</b><span>00:21</span></figcaption></figure><figure class="frame"><img src="frames/f000640.jpg" alt=""><figcaption><b>02</b><span>01:04</span></figcaption></figure><figure class="frame"><img src="frames/f002400.jpg" alt=""><figcaption><b>03</b><span>04:00</span></figcaption></figure></div>
+  <div class="notes">
+    <header><a class="range" href="#">00:12 – 05:01</a>
+      <span class="acts"><button>고치기</button><button>다시 만들기 ▾</button><button>받아 적은 글</button></span></header>
+    <h2>졸업논문 일화와 &#x27;즉각적 만족 원숭이&#x27;의 등장</h2>
+    <ul class="pts"><li><span class="txt">보통 학생은 과제를 기간 전체에 나눠서 하지만, 정치학 전공이던 Tim Urban은 매번 계획만 세워 두고 실제로는 마감 직전에 몰아서 했다.</span><a class="tc" href="#">00:19</a></li><li><span class="txt">1년 동안 써야 하는 90쪽짜리 졸업논문은 평소처럼 할 수 없다고 보고, 초반엔 가볍게 시작해 계단처럼 작업량을 늘려 가는 계획을 세웠다.</span><a class="tc" href="#">00:51</a></li><li><span class="txt">하지만 첫 몇 달도, 중간 몇 달도 거의 쓰지 못한 채 지나갔고, 그때마다 계획만 새로 고쳤다.</span><a class="tc" href="#">00:24</a></li><li><span class="txt">마감 사흘 전까지 한 단어도 쓰지 못했고, 결국 72시간 동안 밤을 두 번 새워 90쪽을 써서 마감에 겨우 냈다.</span><a class="tc" href="#">00:47</a></li><li><span class="txt">학교에서 &#x27;역대 최고의 논문&#x27;이라는 연락을 받았다는 농담을 한 뒤, 사실은 아주 형편없는 논문이었다고 밝혔다.</span><a class="tc" href="#">02:25</a></li><li><span class="txt">지금은 블로그 Wait But Why를 쓰고 있으며, 미루지 않는 사람들에게 미루는 사람의 머릿속에서 무슨 일이 일어나는지 설명하려고 미루기에 관한 글을 썼다.</span><a class="tc" href="#">02:55</a></li><li><span class="txt">미루는 사람의 뇌는 다르다는 가설을 세우고, 자신의 뇌와 미루지 않는 사람의 뇌를 MRI로 찍어 비교했다는 설정으로 두 뇌 그림을 보여 주었다. 두 뇌 모두 &#x27;합리적 의사결정자(Rational Decision-Maker)&#x27;가 있지만, 미루는 사람의 뇌에는 &#x27;즉각적 만족 원숭이(Instant Gratification Monkey)&#x27;도 있다.</span><a class="tc" href="#">03:34</a></li><li><span class="txt">합리적 의사결정자가 생산적인 일을 하기로 하면 원숭이가 운전대를 빼앗는다. 그러고는 위키백과의 Nancy Kerrigan·Tonya Harding 사건 문서 읽기, 10분 전에 열어 본 냉장고 다시 열기, Richard Feynman 영상에서 시작해 Justin Bieber 엄마 인터뷰로 끝나는 YouTube 연쇄 시청 때문에 오늘은 일할 시간이 없다고 한다.</span><a class="tc" href="#">04:12</a></li></ul>
+    <div class="seen"><h3>화면에서 읽은 것</h3><ul><li><a class="tc" href="#">01:04</a><span class="txt">그래프 슬라이드: 세로축은 &#x27;WORK PER DAY&#x27;, 가로축 시작점에 &#x27;Paper Assigned&#x27;라는 화살표 표시가 있다. 오른쪽 끝(마감 쪽)에는 파란 세로 막대 하나만 높게 솟아 있다. 일을 마감 직전에 몰아서 하는 패턴을 그린 것이다.</span></li><li><a class="tc" href="#">04:00</a><span class="txt">뇌 그림 슬라이드: 머리 안에서 막대 인간 &#x27;Rational Decision-Maker&#x27;(초록 글씨)가 배의 키(운전대)를 잡고 있고, 그 옆에 원숭이 &#x27;Instant Gratification Monkey&#x27;(빨간 글씨)가 서 있다.</span></li></ul></div>
+  </div>
+</section><section class="cut edited">
+  <div class="strip"><figure class="frame"><img src="frames/f003740.jpg" alt=""><figcaption><b>04</b><span>06:14</span></figcaption></figure><figure class="frame"><img src="frames/f003910.jpg" alt=""><figcaption><b>05</b><span>06:31</span></figcaption></figure><figure class="frame"><img src="frames/f005570.jpg" alt=""><figcaption><b>06</b><span>09:17</span></figcaption></figure></div>
+  <div class="notes">
+    <header><a class="range" href="#">05:03 – 10:44</a><span class="mark">고침</span>
+      <span class="acts"><button>고치기</button><button>다시 만들기 ▾</button><button>받아 적은 글</button></span></header>
+    <h2>원숭이, 이성적 결정자, 패닉 몬스터의 구조</h2>
+    <ul class="pts"><li><span class="txt">즉각적 만족 원숭이는 현재만 살고 과거도 미래도 모른다. 원숭이가 신경 쓰는 것은 &#x27;쉽고 재미있는 것&#x27;뿐이다. 동물 세계나 부족 시대에는 이 방식이 통했지만, 원숭이는 발전된 문명이 무엇인지 모른다.</span><a class="tc" href="#">05:03</a></li><li><span class="txt">그래서 뇌에는 &#x27;이성적 결정자(Rational Decision-Maker)&#x27;가 따로 있다. 미래를 그려 보고, 큰 그림을 보고, 장기 계획을 세워 지금 해야 맞는 일을 하려 한다.</span><a class="tc" href="#">05:45</a></li><li><span class="txt">식사나 수면, 정당하게 얻은 여가처럼 둘의 생각이 겹칠 때도 있다. 하지만 큰 그림을 위해 힘들고 덜 즐거운 일을 해야 할 때는 둘이 충돌한다.</span><a class="tc" href="#">06:06</a></li><li><span class="txt">미루는 사람은 이 충돌에서 늘 원숭이가 이긴다. 그래서 &#x27;말이 되는 일&#x27; 영역 밖에 있는 &#x27;어두운 놀이터(Dark Playground)&#x27;에서 오래 머문다. 놀면 안 될 때 노는 곳이라 노력 없이 얻은 재미는 즐겁지 않고, 죄책감·불안·자기혐오가 가득하다.</span><a class="tc" href="#">06:28</a></li><li><span class="txt">미루는 사람에게는 &#x27;패닉 몬스터(Panic Monster)&#x27;라는 수호천사가 있다. 평소에는 잠들어 있다가 마감이 다가오거나 망신·커리어 위기가 닥치면 깨어난다. 원숭이가 유일하게 무서워하는 존재다.</span><a class="tc" href="#">07:17</a></li><li><span class="txt">TED 강연 일화: 6개월 전에 초대를 수락했을 때 이성적 결정자는 바로 준비하자고 했다. 하지만 원숭이는 구글 어스로 인도 남쪽 끝에서 북쪽 끝까지 2시간 반 동안 스크롤했다. 연사 명단에 자기 얼굴이 공개되자 패닉 몬스터가 깨어났고, 원숭이는 나무 위로 도망쳤다. 그제야 이성적 결정자가 운전대를 잡고 준비를 시작했다.</span><a class="tc" href="#">07:56</a></li><li><span class="txt">패닉 몬스터로 미루는 사람의 이상한 행동이 설명된다. 2주 동안 논문 첫 문장도 못 쓰다가 하룻밤 새워 8페이지를 쓰는 식이다. 세 캐릭터로 된 이 시스템은 보기 좋지 않지만 결국은 작동한다.</span><a class="tc" href="#">09:37</a></li><li><span class="txt">몇 년 전 이 내용을 블로그에 쓰자 간호사, 은행원, 화가, 엔지니어, 수많은 박사과정생 등 전 세계에서 &#x27;나도 그렇다&#x27;는 이메일이 수천 통 왔다. 놀라웠던 것은 글의 가벼운 톤과 달리 이메일들이 미루기가 삶에 끼친 피해를 담아 매우 무겁고 절박했다는 점이다.</span><a class="tc" href="#">10:05</a></li></ul>
+    <div class="seen"><h3>화면에서 읽은 것</h3><ul><li><a class="tc" href="#">09:17</a><span class="txt">슬라이드 그림: 빨간 털북숭이 괴물(패닉 몬스터)이 &#x27;AAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHH&#x27;라고 소리치고, 배의 조타륜을 잡은 원숭이가 놀라고(머리 위 &#x27;!&#x27;), 옆에 막대 인간(이성적 결정자)이 서 있다.</span></li></ul></div>
+  </div>
+</section><section class="cut">
+  <div class="strip"><figure class="frame"><img src="frames/f007850.jpg" alt=""><figcaption><b>07</b><span>13:05</span></figcaption></figure></div>
+  <div class="notes">
+    <header><a class="range" href="#">10:46 – 14:02</a>
+      <span class="acts"><button>고치기</button><button>다시 만들기 ▾</button><button>받아 적은 글</button></span></header>
+    <h2>마감 없는 장기 미루기와 인생 달력</h2>
+    <ul class="pts"><li><span class="txt">미루기에는 두 종류가 있다. 지금까지 든 예는 모두 마감이 있는 경우였고, 이때는 패닉 몬스터가 나타나서 미루기의 피해가 단기간에 그친다.</span><a class="tc" href="#">10:55</a></li><li><span class="txt">두 번째는 마감이 없는 상황의 미루기다. 예술가나 창업가처럼 스스로 일을 시작해야 하는 경력은 직접 힘들게 추진력을 만들기 전까지는 마감이 없다.</span><a class="tc" href="#">11:10</a></li><li><span class="txt">가족 만나기, 운동과 건강 관리, 연애를 가꾸거나 맞지 않는 관계를 끝내는 일처럼 일 밖의 중요한 일도 마감이 없다.</span><a class="tc" href="#">11:27</a></li><li><span class="txt">패닉 몬스터가 유일한 동력이라면, 마감이 없는 상황에서는 몬스터가 깨어나지 않으니 미루기의 피해가 끝없이 이어진다.</span><a class="tc" href="#">11:39</a></li><li><span class="txt">이런 장기 미루기는 웃긴 마감형보다 눈에 덜 띄고 덜 이야기된다. 대개 혼자 조용히 겪으며, 오래가는 불행과 후회의 큰 원인이 된다.</span><a class="tc" href="#">11:57</a></li><li><span class="txt">그에게 이메일을 보낸 사람들이 괴로운 이유도 여기에 있다. 벼락치기 때문이 아니라 자기 삶의 구경꾼이 된 듯한 느낌 때문이고, 꿈을 이루지 못해서가 아니라 쫓기 시작조차 못 해서 답답한 것이다.</span><a class="tc" href="#">12:16</a></li><li><span class="txt">결론: 미루지 않는 사람은 없고 모두가 미루는 사람이다. 마감을 잘 지키는 사람이라도, 원숭이의 가장 교활한 수법은 마감이 없을 때 나온다.</span><a class="tc" href="#">12:36</a></li><li><span class="txt">&#x27;인생 달력(Life Calendar)&#x27;을 보여 준다. 90년 인생을 한 주에 한 칸씩 그린 것으로, 칸이 생각보다 적고 이미 써 버린 칸도 많다. 각자 무엇을 미루고 있는지 돌아보고 즉각 만족 원숭이(Instant Gratification Monkey)를 늘 경계해야 하며, 남은 칸이 많지 않으니 오늘 시작해야 한다고 말한 뒤 &#x27;오늘은 말고, 곧&#x27;이라는 농담으로 끝맺는다.</span><a class="tc" href="#">13:05</a></li></ul>
+    <div class="seen"><h3>화면에서 읽은 것</h3><ul><li><a class="tc" href="#">13:05</a><span class="txt">인생 달력 화면은 흰 바탕에 작은 빈 네모 칸만 빽빽하게 격자로 깔려 있다. 글자나 축 표시는 없고, 이 시점에는 이미 써 버린 칸도 따로 칠해져 있지 않다.</span></li></ul></div>
+  </div>
+</section>
+</article></main></div>
